@@ -18,7 +18,7 @@ from app import database as db
 from app.classifier import Classifier
 from app.explain import ExplanationResult, TokenWeight, explain
 from app.highlight import build_highlighted_html
-from app.validation import ValidationError, fetch_article_from_url, validate_submission, is_trusted_source, TRUSTED_SOURCES
+from app.validation import ValidationError, fetch_article_from_url, validate_submission, is_trusted_source, trusted_source_name, TRUSTED_SOURCES
 
 BASE_DIR = Path(__file__).resolve().parent.parent.parent
 STANDING_CAVEAT = (
@@ -150,6 +150,12 @@ def analyze(
         if cached is not None:
             explanation_rows = db.get_explanations(conn, cached["analysis_id"])
             model_row = db.get_model(conn, cached["model_id"])
+            # Results recorded while the dev placeholder was active have no
+            # evidentiary value — re-analyse with the real loaded model rather
+            # than serving a stale placeholder verdict from cache.
+            if model_row and model_row["is_placeholder"]:
+                cached = None
+        if cached is not None:
             # Check both the current submission's URL and the cached record's
             # URL — either being trusted is enough to apply the override.
             is_trusted_override = (
@@ -220,6 +226,9 @@ def _render_context(
         for t in ordered
     ]
     is_fake = analysis_row["predicted_label"] == db.LABEL_FAKE
+    trusted_name = trusted_source_name(submission.source_url) or trusted_source_name(
+        analysis_row["source_url"]
+    )
     return {
         "caveat": STANDING_CAVEAT,
         "headline": submission.headline,
@@ -234,5 +243,6 @@ def _render_context(
         "is_placeholder": bool(model_row["is_placeholder"]) if model_row else False,
         "cache_hit": cache_hit,
         "is_trusted_source_override": is_trusted_source_override,
+        "trusted_source_name": trusted_name,
         "source_url": submission.source_url,
     }

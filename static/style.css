@@ -115,13 +115,26 @@ body {
   padding: 0.7rem 1rem;
   font: inherit;
   font-weight: 600;
-  border: none;
+  border: 1px solid var(--border);
   border-radius: 8px;
-  background: var(--series-real);
-  color: #ffffff;
+  color: #0b0b0b;
   cursor: pointer;
+  background-color: #ffffff;
+  background-image: linear-gradient(to top, #06A11B, #06A11B);
+  background-repeat: no-repeat;
+  background-position: bottom;
+  background-size: 100% 0%;
+  transition: background-size 0.25s ease, color 0.25s ease, border-color 0.25s ease;
 }
-.submission-form button:hover { opacity: 0.9; }
+.submission-form button:hover {
+  background-size: 100% 100%;
+  color: #ffffff;
+  border-color: #06A11B;
+}
+.submission-form button:active {
+  background-image: linear-gradient(to top, #045e10, #045e10);
+  border-color: #045e10;
+}
 
 .alert {
   padding: 0.75rem 1rem;
@@ -180,6 +193,7 @@ body {
   gap: 1rem;
   margin-top: 0.6rem;
 }
+.text-pager[hidden] { display: none; }
 .text-pager button {
   padding: 0.4rem 0.9rem;
   font: inherit;
@@ -213,12 +227,33 @@ body {
 }
 
 .back-link {
-  display: inline-block;
-  margin-top: 1rem;
-  color: var(--series-real);
+  display: block;
+  width: 100%;
+  margin-top: 1.25rem;
+  padding: 0.7rem 1rem;
+  font-weight: 600;
+  color: #0b0b0b;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  text-decoration: none;
+  text-align: center;
+  background-color: #ffffff;
+  background-image: linear-gradient(to top, #06A11B, #06A11B);
+  background-repeat: no-repeat;
+  background-position: bottom;
+  background-size: 100% 0%;
+  transition: background-size 0.25s ease, color 0.25s ease, border-color 0.25s ease;
+}
+.back-link:hover {
+  background-size: 100% 100%;
+  color: #ffffff;
+  border-color: #06A11B;
   text-decoration: none;
 }
-.back-link:hover { text-decoration: underline; }
+.back-link:active {
+  background-image: linear-gradient(to top, #045e10, #045e10);
+  border-color: #045e10;
+}
 
 /* Diverging bar chart — LIME top-10 features */
 .lime-chart { margin-top: 0.5rem; }

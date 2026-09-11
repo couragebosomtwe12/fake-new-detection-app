@@ -20,7 +20,7 @@ URL_TIMEOUT_SECONDS = 10
 # Trusted news sources whitelist - override model predictions for these domains
 TRUSTED_SOURCES = {
     "aljazeera.com",
-    "bbc.com", 
+    "bbc.com",
     "bbc.co.uk",
     "reuters.com",
     "apnews.com",
@@ -40,6 +40,40 @@ TRUSTED_SOURCES = {
     "rferl.org",
     "voanews.com"
 }
+
+TRUSTED_SOURCE_NAMES = {
+    "aljazeera.com": "Al Jazeera",
+    "bbc.com": "BBC News",
+    "bbc.co.uk": "BBC News",
+    "reuters.com": "Reuters",
+    "apnews.com": "AP News",
+    "theguardian.com": "The Guardian",
+    "nytimes.com": "The New York Times",
+    "washingtonpost.com": "The Washington Post",
+    "cnn.com": "CNN",
+    "npr.org": "NPR",
+    "ft.com": "Financial Times",
+    "economist.com": "The Economist",
+    "bloomberg.com": "Bloomberg",
+    "wsj.com": "The Wall Street Journal",
+    "latimes.com": "Los Angeles Times",
+    "chicagotribune.com": "Chicago Tribune",
+    "france24.com": "France 24",
+    "dw.com": "Deutsche Welle",
+    "rferl.org": "Radio Free Europe/Radio Liberty",
+    "voanews.com": "Voice of America",
+}
+
+
+def trusted_source_name(source_url: str | None) -> str | None:
+    """Return the display name of the trusted source for a URL, or None."""
+    if not source_url:
+        return None
+    try:
+        domain = urlparse(source_url).netloc.lower().replace("www.", "")
+        return TRUSTED_SOURCE_NAMES.get(domain)
+    except Exception:
+        return None
 
 
 class ValidationError(Exception):
@@ -120,14 +154,42 @@ def validate_url_scheme(url: str) -> None:
 
 
 def fetch_article_from_url(url: str, timeout: int = URL_TIMEOUT_SECONDS) -> tuple[str, str]:
-    """Fetch and extract (title, body) from a URL via newspaper3k, 10s timeout."""
+    """Fetch and extract (title, body) from a URL. Trafilatura is tried
+    first — its boilerplate stripping handles liveblogs and JS-heavy pages
+    that newspaper3k truncates — with newspaper3k as fallback."""
     validate_url_scheme(url)
+
+    html_source = None
+    try:
+        import trafilatura
+
+        downloaded = trafilatura.fetch_url(url)
+        if downloaded:
+            html_source = downloaded
+            body = trafilatura.extract(
+                downloaded,
+                include_comments=False,
+                include_tables=False,
+                favor_recall=True,
+            )
+            if body and body.strip():
+                metadata = trafilatura.extract_metadata(downloaded)
+                title = metadata.title if metadata and metadata.title else ""
+                return title, body
+    except ImportError:
+        pass
+    except Exception:
+        pass  # fall through to newspaper3k
+
     from newspaper import Article
     from newspaper.article import ArticleException
 
     article = Article(url, request_timeout=timeout)
     try:
-        article.download()
+        if html_source:
+            article.set_html(html_source)
+        else:
+            article.download()
         article.parse()
     except ArticleException as exc:
         raise ValidationError(

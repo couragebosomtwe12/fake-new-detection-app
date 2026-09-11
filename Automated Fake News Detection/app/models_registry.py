@@ -16,7 +16,7 @@ from typing import Callable, Literal
 
 import numpy as np
 
-RESULTS_DIR = Path("results")
+RESULTS_DIR = Path(__file__).resolve().parent.parent.parent / "results"
 ModelFamily = Literal["naive_bayes", "svm", "bilstm", "bert"]
 
 

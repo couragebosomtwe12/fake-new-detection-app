@@ -14,6 +14,7 @@ transformers
 
 lime
 newspaper3k
+trafilatura
 lxml_html_clean
 langdetect
 spacy

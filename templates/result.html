@@ -11,7 +11,7 @@
 
   {% if is_trusted_source_override %}
   <div class="alert alert-info" role="alert">
-    <strong>Trusted Source Override:</strong> This article is from a verified legitimate news source ({{ source_url | default('pasted text') }}). The classification has been set to "Likely Real" regardless of the model's analysis, as trusted news sources are presumed to publish factually accurate content.
+    <strong>Trusted source: {{ trusted_source_name or 'Verified news source' }}</strong>
   </div>
   {% endif %}
 
@@ -66,7 +66,7 @@
       var MIN_PARAGRAPHS_TO_PAGINATE = 8;
 
       var paragraphs = container.innerHTML
-        .split(/\n\s*\n/)
+        .split(/\n+/)
         .filter(function (p) { return p.trim().length > 0; });
       if (paragraphs.length < MIN_PARAGRAPHS_TO_PAGINATE) return;
 
