@@ -125,6 +125,26 @@
     </div>
   </div>
 
+  {% if fc_enabled %}
+  <h2>External fact-checks</h2>
+  {% if fc_matches %}
+  <div class="fc-list">
+    {% for m in fc_matches %}
+    <div class="fc-item">
+      <div class="fc-rating-row">
+        <span class="fc-rating fc-rating-{{ m.tone }}">{{ m.rating }}</span>
+        <span class="fc-publisher">{{ m.publisher }}{% if m.review_date %} &middot; {{ m.review_date }}{% endif %}</span>
+      </div>
+      <p class="fc-claim">&ldquo;{{ m.claim }}&rdquo;{% if m.claimant %} &mdash; {{ m.claimant }}{% endif %}</p>
+      {% if m.review_url %}<a class="fc-link" href="{{ m.review_url }}" target="_blank" rel="noopener">Read the fact-check &rarr;</a>{% endif %}
+    </div>
+    {% endfor %}
+  </div>
+  {% else %}
+  <p class="note">No published fact-checks found matching this article's central claim.</p>
+  {% endif %}
+  {% endif %}
+
   <p class="caveat">{{ caveat }}</p>
   <a href="/" class="back-link">&larr; Analyse another article</a>
 </section>

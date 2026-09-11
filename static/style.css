@@ -217,6 +217,44 @@ body {
   font-variant-numeric: tabular-nums;
 }
 
+/* External fact-check matches */
+.fc-list { display: flex; flex-direction: column; gap: 0.75rem; }
+.fc-item {
+  background: var(--page);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 0.75rem 1rem;
+}
+.fc-rating-row { display: flex; align-items: center; gap: 0.6rem; flex-wrap: wrap; }
+.fc-rating {
+  display: inline-block;
+  padding: 0.15rem 0.6rem;
+  border-radius: 999px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+.fc-rating-false {
+  background: color-mix(in srgb, var(--status-critical) 18%, var(--surface-1));
+  color: var(--status-critical);
+  border: 1px solid var(--status-critical);
+}
+.fc-rating-true {
+  background: color-mix(in srgb, var(--status-good) 18%, var(--surface-1));
+  color: var(--status-good);
+  border: 1px solid var(--status-good);
+}
+.fc-rating-mixed {
+  background: color-mix(in srgb, var(--status-warning) 20%, var(--surface-1));
+  color: var(--text-primary);
+  border: 1px solid var(--status-warning);
+}
+.fc-publisher { font-size: 0.85rem; color: var(--text-secondary); font-weight: 600; }
+.fc-claim { margin: 0.5rem 0 0.35rem; font-size: 0.9rem; color: var(--text-primary); }
+.fc-link { font-size: 0.85rem; color: var(--series-real); text-decoration: none; }
+.fc-link:hover { text-decoration: underline; }
+
 .caveat {
   margin-top: 1.5rem;
   padding-top: 1rem;

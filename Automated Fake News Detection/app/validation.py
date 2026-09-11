@@ -17,8 +17,11 @@ MAX_SUBMISSION_TOKENS = 512
 MIN_LANGUAGE_CONFIDENCE = 0.90
 URL_TIMEOUT_SECONDS = 10
 
-# Trusted news sources whitelist - override model predictions for these domains
+# Trusted sources whitelist - override model predictions for these domains.
+# International news outlets, Ghanaian news sites (Feedspot top-20 Ghana list),
+# and Ghanaian university domains. Subdomains match (e.g. site.gctu.edu.gh).
 TRUSTED_SOURCES = {
+    # --- International news ---
     "aljazeera.com",
     "bbc.com",
     "bbc.co.uk",
@@ -38,7 +41,49 @@ TRUSTED_SOURCES = {
     "france24.com",
     "dw.com",
     "rferl.org",
-    "voanews.com"
+    "voanews.com",
+    # --- Ghanaian news (Feedspot top-20 Ghana news websites) ---
+    "pulse.com.gh",
+    "modernghana.com",
+    "myjoyonline.com",
+    "citinewsroom.com",
+    "ghanaweb.com",
+    "ghanaiantimes.com.gh",
+    "peacefmonline.com",
+    "adomonline.com",
+    "graphic.com.gh",
+    "theheraldghana.com",
+    "accramail.com",
+    "jbklutse.com",
+    "mfidie.com",
+    "ghanasummary.com",
+    "gbcghana.com",
+    "tv3.com.gh",
+    "3news.com",
+    "starrfm.com.gh",
+    "classfmonline.com",
+    "gna.org.gh",
+    # --- Ghanaian universities ---
+    "gctu.edu.gh",
+    "ug.edu.gh",
+    "knust.edu.gh",
+    "ucc.edu.gh",
+    "uds.edu.gh",
+    "umat.edu.gh",
+    "uew.edu.gh",
+    "gimpa.edu.gh",
+    "upsa.edu.gh",
+    "uhas.edu.gh",
+    "uenr.edu.gh",
+    "upsamail.edu.gh",
+    "ashesi.edu.gh",
+    "central.edu.gh",
+    "vvu.edu.gh",
+    "atu.edu.gh",
+    "ktu.edu.gh",
+    "ttu.edu.gh",
+    "cctu.edu.gh",
+    "stu.edu.gh",
 }
 
 TRUSTED_SOURCE_NAMES = {
@@ -62,18 +107,69 @@ TRUSTED_SOURCE_NAMES = {
     "dw.com": "Deutsche Welle",
     "rferl.org": "Radio Free Europe/Radio Liberty",
     "voanews.com": "Voice of America",
+    "pulse.com.gh": "Pulse Ghana",
+    "modernghana.com": "Modern Ghana",
+    "myjoyonline.com": "MyJoyOnline",
+    "citinewsroom.com": "Citi Newsroom",
+    "ghanaweb.com": "GhanaWeb",
+    "ghanaiantimes.com.gh": "Ghanaian Times",
+    "peacefmonline.com": "Peace FM Online",
+    "adomonline.com": "Adom Online",
+    "graphic.com.gh": "Graphic Online",
+    "theheraldghana.com": "The Herald Ghana",
+    "accramail.com": "Accra Mail",
+    "jbklutse.com": "JBKlutse",
+    "mfidie.com": "Mfidie",
+    "ghanasummary.com": "GhanaSummary",
+    "gbcghana.com": "GBC Ghana",
+    "tv3.com.gh": "TV3 Ghana",
+    "3news.com": "3News",
+    "starrfm.com.gh": "Starr FM",
+    "classfmonline.com": "Class FM",
+    "gna.org.gh": "Ghana News Agency",
+    "gctu.edu.gh": "GCTU",
+    "ug.edu.gh": "University of Ghana",
+    "knust.edu.gh": "KNUST",
+    "ucc.edu.gh": "University of Cape Coast",
+    "uds.edu.gh": "University for Development Studies",
+    "umat.edu.gh": "University of Mines and Technology",
+    "uew.edu.gh": "University of Education, Winneba",
+    "gimpa.edu.gh": "GIMPA",
+    "upsa.edu.gh": "UPSA",
+    "uhas.edu.gh": "University of Health and Allied Sciences",
+    "uenr.edu.gh": "University of Energy and Natural Resources",
+    "upsamail.edu.gh": "UPSA",
+    "ashesi.edu.gh": "Ashesi University",
+    "central.edu.gh": "Central University",
+    "vvu.edu.gh": "Valley View University",
+    "atu.edu.gh": "Accra Technical University",
+    "ktu.edu.gh": "Koforidua Technical University",
+    "ttu.edu.gh": "Takoradi Technical University",
+    "cctu.edu.gh": "Cape Coast Technical University",
+    "stu.edu.gh": "Sunyani Technical University",
 }
+
+
+def _match_trusted_domain(source_url: str | None) -> str | None:
+    """Return the trusted base domain matching the URL's host (exact or
+    subdomain match), or None."""
+    if not source_url:
+        return None
+    try:
+        host = urlparse(source_url).netloc.lower()
+        host = host.removeprefix("www.")
+        for trusted in TRUSTED_SOURCES:
+            if host == trusted or host.endswith("." + trusted):
+                return trusted
+    except Exception:
+        pass
+    return None
 
 
 def trusted_source_name(source_url: str | None) -> str | None:
     """Return the display name of the trusted source for a URL, or None."""
-    if not source_url:
-        return None
-    try:
-        domain = urlparse(source_url).netloc.lower().replace("www.", "")
-        return TRUSTED_SOURCE_NAMES.get(domain)
-    except Exception:
-        return None
+    domain = _match_trusted_domain(source_url)
+    return TRUSTED_SOURCE_NAMES.get(domain) if domain else None
 
 
 class ValidationError(Exception):
@@ -218,16 +314,8 @@ def apply_length_rule(text: str, family: Literal["classical", "transformer"]) ->
 
 
 def is_trusted_source(source_url: str | None) -> bool:
-    """Check if the URL is from a trusted news source domain."""
-    if not source_url:
-        return False
-    try:
-        domain = urlparse(source_url).netloc.lower()
-        # Remove www. prefix if present
-        domain = domain.replace("www.", "")
-        return domain in TRUSTED_SOURCES
-    except Exception:
-        return False
+    """Check if the URL is from a trusted source domain (exact or subdomain)."""
+    return _match_trusted_domain(source_url) is not None
 
 
 def validate_submission(

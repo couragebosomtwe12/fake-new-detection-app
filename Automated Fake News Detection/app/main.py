@@ -7,6 +7,7 @@ standing caveat on every single result.
 """
 from __future__ import annotations
 
+import os
 from pathlib import Path
 
 from fastapi import FastAPI, Form, Request
@@ -17,6 +18,7 @@ from fastapi.templating import Jinja2Templates
 from app import database as db
 from app.classifier import Classifier
 from app.explain import ExplanationResult, TokenWeight, explain
+from app.factcheck import build_query, fact_check_verdict, search_fact_checks
 from app.highlight import build_highlighted_html
 from app.validation import ValidationError, fetch_article_from_url, validate_submission, is_trusted_source, trusted_source_name, TRUSTED_SOURCES
 
@@ -143,6 +145,10 @@ def analyze(
             status_code=422,
         )
 
+    # External fact-check lookup runs in parallel with classification —
+    # it's an independent signal, not part of the model verdict.
+    fc_matches = search_fact_checks(build_query(submission.headline, submission.body))
+
     conn = db.get_connection()
     try:
         text_hash = db.hash_text(submission.body)
@@ -171,7 +177,7 @@ def analyze(
                 cached["confidence"] = 0.95
                 cached["is_low_confidence"] = 0
             context = _render_context(
-                submission, cached, explanation_rows, model_row, True, is_trusted_override
+                submission, cached, explanation_rows, model_row, True, is_trusted_override, fc_matches
             )
         else:
             result = classifier.classify(submission.body)
@@ -202,7 +208,7 @@ def analyze(
             analysis_row = db.get_analysis(conn, analysis_id)
             explanation_rows = db.get_explanations(conn, analysis_id)
             context = _render_context(
-                submission, analysis_row, explanation_rows, model_row, False, is_trusted_override
+                submission, analysis_row, explanation_rows, model_row, False, is_trusted_override, fc_matches
             )
     finally:
         conn.close()
@@ -211,7 +217,8 @@ def analyze(
 
 
 def _render_context(
-    submission, analysis_row, explanation_rows, model_row, cache_hit: bool, is_trusted_source_override: bool = False
+    submission, analysis_row, explanation_rows, model_row, cache_hit: bool,
+    is_trusted_source_override: bool = False, fc_matches: list | None = None,
 ) -> dict:
     tokens = [TokenWeight(token=r["token"], weight=r["weight"]) for r in explanation_rows]
     max_weight = max((abs(t.weight) for t in tokens), default=1.0) or 1.0
@@ -244,5 +251,8 @@ def _render_context(
         "cache_hit": cache_hit,
         "is_trusted_source_override": is_trusted_source_override,
         "trusted_source_name": trusted_name,
+        "fc_matches": fc_matches or [],
+        "fc_verdict": fact_check_verdict(fc_matches or []),
+        "fc_enabled": bool(os.environ.get("GOOGLE_FACTCHECK_API_KEY")),
         "source_url": submission.source_url,
     }

@@ -5,3 +5,8 @@ services:
     dockerfilePath: ./Dockerfile.render
     plan: free
     healthCheckPath: /
+    envVars:
+      # Set the actual value in the Render dashboard (Environment tab) —
+      # secrets must not be committed to the repository.
+      - key: GOOGLE_FACTCHECK_API_KEY
+        sync: false
