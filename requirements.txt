@@ -1,0 +1,21 @@
+# Automated Fake News Detection System — Python 3.11 
+fastapi
+uvicorn[standard]
+python-multipart
+jinja2
+
+scikit-learn
+joblib
+numpy
+pandas
+
+torch
+transformers
+
+lime
+newspaper3k
+lxml_html_clean
+langdetect
+spacy
+
+pytest

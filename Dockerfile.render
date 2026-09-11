@@ -1,0 +1,24 @@
+# Render deployment — slim SVM-only image (no torch/transformers needed)
+FROM python:3.11-slim
+
+WORKDIR /app
+
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends build-essential \
+    && rm -rf /var/lib/apt/lists/*
+
+COPY requirements-render.txt .
+RUN pip install --no-cache-dir -r requirements-render.txt \
+    && python -m spacy download en_core_web_sm
+
+# Only copy what the SVM app needs — keeps the image small
+COPY ["Automated Fake News Detection/app", "Automated Fake News Detection/app"]
+COPY templates templates
+COPY static static
+COPY results/svm results/svm
+COPY results/naive_bayes results/naive_bayes
+
+ENV PYTHONPATH="/app/Automated Fake News Detection"
+
+# Render assigns a port via $PORT (default 10000)
+CMD python -m uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-10000}

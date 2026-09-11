@@ -1,0 +1,19 @@
+# Runtime dependencies for Hugging Face Spaces / Docker (CPU).
+# Install PyTorch separately in the Dockerfile (CPU wheel) before this file.
+fastapi
+uvicorn[standard]
+python-multipart
+jinja2
+
+scikit-learn
+joblib
+numpy
+pandas
+
+transformers
+
+lime
+newspaper3k
+lxml_html_clean
+langdetect
+spacy

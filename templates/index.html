@@ -1,0 +1,52 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="submission-card">
+  {% if error %}
+  <div class="alert alert-error" role="alert">{{ error }}</div>
+  {% endif %}
+
+  <form action="/analyze" method="post" class="submission-form">
+    <label for="headline">Headline <span class="optional">(optional &mdash; minimum 5 words if given)</span></label>
+    <input type="text" id="headline" name="headline" value="{{ headline or '' }}"
+           placeholder="e.g. Local council approves new annual budget">
+
+    <label for="body">Article body <span class="optional">(minimum 30 words)</span></label>
+    <textarea id="body" name="body" rows="10"
+              placeholder="Paste the article text here&hellip;">{{ body or '' }}</textarea>
+
+    <div class="or-divider"><span>or paste a URL instead</span></div>
+
+    <label for="source_url">Article URL</label>
+    <input type="url" id="source_url" name="source_url" value="{{ source_url or '' }}"
+           placeholder="https://example.com/article">
+
+    <button type="submit">Analyse</button>
+  </form>
+
+  <p class="caveat">{{ caveat }}</p>
+</section>
+
+<div id="loading-overlay" class="loading-overlay" role="status" aria-live="polite">
+  <div class="loading-box">
+    <div class="spinner" aria-hidden="true"></div>
+    <p>Analysing news&hellip;</p>
+    <p class="loading-note">This can take a little while &mdash; the explanation
+      step re-runs the classifier hundreds of times.</p>
+  </div>
+</div>
+<script>
+  (function () {
+    var form = document.querySelector('.submission-form');
+    var overlay = document.getElementById('loading-overlay');
+    if (!form || !overlay) return;
+    form.addEventListener('submit', function () {
+      overlay.classList.add('is-visible');
+      var btn = form.querySelector('button[type="submit"]');
+      if (btn) {
+        btn.disabled = true;
+        btn.textContent = 'Analysing…';
+      }
+    });
+  })();
+</script>
+{% endblock %}

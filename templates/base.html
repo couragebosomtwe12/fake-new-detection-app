@@ -1,0 +1,21 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{% block title %}Automated Fake News Detection{% endblock %}</title>
+    <link rel="stylesheet" href="{{ url_for('static', path='style.css') }}" />
+  </head>
+  <body>
+    <header class="site-header">
+      <h1>Automated Fake News Detection System</h1>
+      <p class="tagline">
+        Binary classification of news text, with the decision explained.
+      </p>
+    </header>
+    <main class="site-main">{% block content %}{% endblock %}</main>
+    <footer class="site-footer">
+      <p>Final-year project.</p>
+    </footer>
+  </body>
+</html>

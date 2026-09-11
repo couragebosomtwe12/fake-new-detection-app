@@ -1,0 +1,5 @@
+# Git LFS rules kept only for large model weights IF you ever commit BERT/BiLSTM
+# (~438 MB / ~11 MB). SVM and Naive Bayes joblib artifacts are tiny (~1.4 MB)
+# and are committed as regular files — no LFS needed.
+*.safetensors filter=lfs diff=lfs merge=lfs -text
+*.pt filter=lfs diff=lfs merge=lfs -text

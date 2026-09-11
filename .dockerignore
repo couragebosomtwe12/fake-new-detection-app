@@ -1,0 +1,16 @@
+# Keep the Docker build context small — inference only, no training data or dev tooling.
+.git
+.gitignore
+.pytest_cache
+__pycache__
+*.pyc
+*.db
+
+Google Colab/
+data/
+tests/
+documentation/
+.claude/
+
+# Local-only; model weights must be present under results/ on the host before you build.
+# (Do not add results/ here — the image needs those artifacts.)

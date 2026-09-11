@@ -1,0 +1,131 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="result-card">
+  {% if is_placeholder %}
+  <div class="alert alert-warning" role="alert">
+    Development placeholder model in use ({{ model_name }}). This result has no evidentiary or
+    report value &mdash; train a real model with <code>run_pipeline.py</code> and place its
+    artifacts under <code>results/</code>.
+  </div>
+  {% endif %}
+
+  {% if is_trusted_source_override %}
+  <div class="alert alert-info" role="alert">
+    <strong>Trusted Source Override:</strong> This article is from a verified legitimate news source ({{ source_url | default('pasted text') }}). The classification has been set to "Likely Real" regardless of the model's analysis, as trusted news sources are presumed to publish factually accurate content.
+  </div>
+  {% endif %}
+
+  {# Temporarily disabled for screenshots (2026-08-13) — re-enable afterwards.
+  {% if is_demo_override %}
+  <div class="alert alert-warning" role="alert">
+    This demo serves {{ model_name }} rather than BERT &mdash; BERT is this project's
+    best-performing model (Table 4.1), but LIME re-queries it roughly 1,000 times per
+    explanation, which does not complete in a practical time on CPU-only hardware (a documented
+    limitation, Section 3.15.4). {{ model_name }} was chosen because its LIME explanation
+    latency has been directly measured (Table 4.4), so this demonstration responds in seconds
+    rather than several minutes.
+  </div>
+  {% endif %}
+  #}
+
+  <div class="verdict verdict-{{ label }}">
+    <span class="verdict-label">{{ label_display }}</span>
+    <span class="verdict-confidence">{{ confidence_pct }}% confidence</span>
+  </div>
+
+  {% if is_low_confidence %}
+  <p class="badge badge-low-confidence">Low confidence &mdash; this result sits close to the decision boundary.</p>
+  {% endif %}
+
+  {% if cache_hit %}
+  <p class="note">Identical text was analysed before &mdash; showing the cached result.</p>
+  {% endif %}
+
+  <h2>Submitted text</h2>
+  <div class="submitted-text" id="submitted-text">{{ highlighted_body|safe }}</div>
+  <div class="text-pager" id="text-pager" hidden>
+    <button type="button" id="text-pager-prev">&larr; Prev</button>
+    <span class="text-pager-indicator" id="text-pager-indicator"></span>
+    <button type="button" id="text-pager-next">Next &rarr;</button>
+  </div>
+  <script>
+    (function () {
+      // Paginates the submitted-text box so a long article doesn't force a
+      // long page scroll. Splits on blank-line paragraph breaks, which
+      // never fall inside a <mark> highlight span (those wrap single
+      // tokens), so the highlighting survives the split intact. Short
+      // submissions are left exactly as rendered — no pager shown.
+      var container = document.getElementById('submitted-text');
+      var pager = document.getElementById('text-pager');
+      var prevBtn = document.getElementById('text-pager-prev');
+      var nextBtn = document.getElementById('text-pager-next');
+      var indicator = document.getElementById('text-pager-indicator');
+      if (!container) return;
+
+      var PARAGRAPHS_PER_PAGE = 4;
+      var MIN_PARAGRAPHS_TO_PAGINATE = 8;
+
+      var paragraphs = container.innerHTML
+        .split(/\n\s*\n/)
+        .filter(function (p) { return p.trim().length > 0; });
+      if (paragraphs.length < MIN_PARAGRAPHS_TO_PAGINATE) return;
+
+      var pages = [];
+      for (var i = 0; i < paragraphs.length; i += PARAGRAPHS_PER_PAGE) {
+        pages.push(paragraphs.slice(i, i + PARAGRAPHS_PER_PAGE).join('\n\n'));
+      }
+
+      var current = 0;
+      function render() {
+        container.innerHTML = pages[current];
+        indicator.textContent = 'Page ' + (current + 1) + ' of ' + pages.length;
+        prevBtn.disabled = current === 0;
+        nextBtn.disabled = current === pages.length - 1;
+        container.scrollIntoView({ block: 'nearest' });
+      }
+      prevBtn.addEventListener('click', function () {
+        if (current > 0) { current--; render(); }
+      });
+      nextBtn.addEventListener('click', function () {
+        if (current < pages.length - 1) { current++; render(); }
+      });
+
+      pager.hidden = false;
+      render();
+    })();
+  </script>
+
+  <h2>Top contributing features</h2>
+  <div class="viz-root lime-chart">
+    <div class="lime-chart-legend">
+      <span class="legend-item"><i class="swatch swatch-real"></i>Pushes toward Real</span>
+      <span class="legend-item"><i class="swatch swatch-fake"></i>Pushes toward Fake</span>
+    </div>
+    <div class="lime-chart-body">
+      {% for row in chart_data %}
+      <div class="lime-row">
+        <div class="lime-label">{{ row.token }}</div>
+        <div class="lime-track">
+          <div class="lime-half lime-half-real">
+            {% if row.direction == 'real' %}
+            <span class="lime-value">{{ "%.3f"|format(row.weight) }}</span>
+            <div class="lime-bar lime-bar-real" style="width: {{ row.pct }}%;"></div>
+            {% endif %}
+          </div>
+          <div class="lime-zero"></div>
+          <div class="lime-half lime-half-fake">
+            {% if row.direction == 'fake' %}
+            <div class="lime-bar lime-bar-fake" style="width: {{ row.pct }}%;"></div>
+            <span class="lime-value">{{ "%+.3f"|format(row.weight) }}</span>
+            {% endif %}
+          </div>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+
+  <p class="caveat">{{ caveat }}</p>
+  <a href="/" class="back-link">&larr; Analyse another article</a>
+</section>
+{% endblock %}

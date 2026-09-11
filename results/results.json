@@ -1,0 +1,249 @@
+{
+  "liar": {
+    "svm_C_sweep": {
+      "0.1": 0.5941151561751301,
+      "1": 0.5713197697046153,
+      "10": 0.5491574944520647
+    },
+    "svm_C_selected": 0.1,
+    "naive_bayes": {
+      "accuracy": 0.6119559517566859,
+      "precision": 0.592391304347826,
+      "recall": 0.38836104513064135,
+      "f1": 0.46915351506456243,
+      "macro_f1": 0.5816841955488101,
+      "confusion": [
+        [
+          840,
+          225
+        ],
+        [
+          515,
+          327
+        ]
+      ]
+    },
+    "svm": {
+      "accuracy": 0.616675406397483,
+      "precision": 0.5926544240400667,
+      "recall": 0.42161520190023755,
+      "f1": 0.49271339347675225,
+      "macro_f1": 0.592332255103315,
+      "confusion": [
+        [
+          821,
+          244
+        ],
+        [
+          487,
+          355
+        ]
+      ]
+    },
+    "bilstm": {
+      "accuracy": 0.5977975878342947,
+      "precision": 0.5708884688090737,
+      "recall": 0.3586698337292161,
+      "f1": 0.44055433989788473,
+      "macro_f1": 0.5632980459211077,
+      "confusion": [
+        [
+          838,
+          227
+        ],
+        [
+          540,
+          302
+        ]
+      ]
+    },
+    "lime": {
+      "jaccard_mean": 0.8626600066600066,
+      "jaccard_sd": 0.12716695710035783,
+      "latency_mean": 1.5453486967086791,
+      "latency_p95": 2.508290326595306,
+      "flip_rate": 0.28,
+      "mean_conf_drop": -0.003622748839109703,
+      "n_items": 50,
+      "n_runs": 5,
+      "n_samples": 1000
+    }
+  },
+  "isot": {
+    "svm_C_sweep": {
+      "0.1": 0.989850652175324,
+      "1": 0.9943942928930983,
+      "10": 0.9933335926921019
+    },
+    "svm_C_selected": 1,
+    "naive_bayes": {
+      "accuracy": 0.9467070401211204,
+      "precision": 0.9442009932807479,
+      "recall": 0.9525493663424698,
+      "f1": 0.9483568075117371,
+      "macro_f1": 0.9466525983132661,
+      "confusion": [
+        [
+          3021,
+          191
+        ],
+        [
+          161,
+          3232
+        ]
+      ]
+    },
+    "svm": {
+      "accuracy": 0.9934897804693414,
+      "precision": 0.9941002949852508,
+      "recall": 0.9932213380489242,
+      "f1": 0.9936606221435943,
+      "macro_f1": 0.9934850488965987,
+      "confusion": [
+        [
+          3192,
+          20
+        ],
+        [
+          23,
+          3370
+        ]
+      ]
+    },
+    "bilstm": {
+      "accuracy": 0.9984859954579863,
+      "precision": 0.9976463665784054,
+      "recall": 0.999410551134689,
+      "f1": 0.998527679623086,
+      "macro_f1": 0.9984847809146904,
+      "confusion": [
+        [
+          3204,
+          8
+        ],
+        [
+          2,
+          3391
+        ]
+      ]
+    },
+    "bert": {
+      "accuracy": 0.9998485995457986,
+      "precision": 0.9997053624042428,
+      "recall": 1.0,
+      "f1": 0.9998526594960955,
+      "macro_f1": 0.9998484845043921,
+      "confusion": [
+        [
+          3211,
+          1
+        ],
+        [
+          0,
+          3393
+        ]
+      ]
+    },
+    "bert_val_losses": [
+      0.0022602872238654736,
+      0.0014078942470247136,
+      0.0017703573070329786
+    ],
+    "lime_bert": {
+      "status": "not_run_infeasible_on_cpu",
+      "device": "cpu",
+      "num_samples_attempted": 1000,
+      "single_explanation_cpu_seconds_observed": 934.98,
+      "single_explanation_completed": false,
+      "note": "A single LIME explanation (num_samples=1000, bow=False per Table 3.8) over the fine-tuned bert-base-uncased checkpoint had not finished after accumulating ~935s of CPU time (sampled via Get-Process immediately before the run was manually stopped), while sharing the CPU with concurrent ISOT BiLSTM training and LIME-on-ISOT (SVM) jobs. The full stability (50 items x 5 runs) + faithfulness (50 items) protocol needs 300 such explanations, making it impractical on this CPU-only machine. This confirms Section 3.15's own performance warning empirically rather than by assumption. LIME-on-BERT stability/faithfulness is therefore reported as a limitation, not measured. Re-running on a GPU (e.g. Colab, as BERT training itself was done) is the recommended path if this figure is required later.",
+      "measured_at": "2026-08-05"
+    },
+    "lime": {
+      "jaccard_mean": 0.3697190765890456,
+      "jaccard_sd": 0.24145479952382082,
+      "latency_mean": 44.409192051887516,
+      "latency_p95": 92.5391763448715,
+      "flip_rate": 0.02,
+      "mean_conf_drop": 0.016170721070781283,
+      "n_items": 50,
+      "n_runs": 5,
+      "n_samples": 1000
+    }
+  },
+  "cross_dataset": {
+    "ISOT->LIAR": {
+      "in_dist": {
+        "accuracy": 0.9947009841029523,
+        "precision": 0.9961583924349882,
+        "recall": 0.9935160624815798,
+        "f1": 0.9948354729231224,
+        "macro_f1": 0.9946973882569909,
+        "confusion": [
+          [
+            3199,
+            13
+          ],
+          [
+            22,
+            3371
+          ]
+        ]
+      },
+      "cross": {
+        "accuracy": 0.4583497207582789,
+        "precision": 0.44015407741450585,
+        "recall": 0.8348182466143977,
+        "f1": 0.5764025590551181,
+        "macro_f1": 0.412737811697679,
+        "confusion": [
+          [
+            1142,
+            5959
+          ],
+          [
+            927,
+            4685
+          ]
+        ]
+      },
+      "gap": 0.581959576559312
+    },
+    "LIAR->ISOT": {
+      "in_dist": {
+        "accuracy": 0.610907184058731,
+        "precision": 0.5560538116591929,
+        "recall": 0.5890736342042755,
+        "f1": 0.5720876585928489,
+        "macro_f1": 0.6076784446810399,
+        "confusion": [
+          [
+            669,
+            396
+          ],
+          [
+            346,
+            496
+          ]
+        ]
+      },
+      "cross": {
+        "accuracy": 0.5555404147078195,
+        "precision": 0.5538157011063589,
+        "recall": 0.6928145036480212,
+        "f1": 0.6155659450752368,
+        "macro_f1": 0.5444338499194679,
+        "confusion": [
+          [
+            8793,
+            12623
+          ],
+          [
+            6947,
+            15668
+          ]
+        ]
+      },
+      "gap": 0.06324459476157207
+    }
+  }
+}

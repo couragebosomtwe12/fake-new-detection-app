@@ -1,0 +1,15 @@
+# Slim runtime dependencies for Render deployment (SVM-only, no torch/transformers).
+fastapi
+uvicorn[standard]
+python-multipart
+jinja2
+
+scikit-learn
+joblib
+numpy
+
+lime
+newspaper3k
+lxml_html_clean
+langdetect
+spacy

@@ -1,0 +1,314 @@
+/* Automated Fake News Detection System — plain CSS, no framework.
+   Colour roles follow the project's data-viz palette: blue/red diverging
+   pair for Real/Fake, a fixed status palette for alerts, light/dark aware. */
+
+:root {
+  color-scheme: light;
+  --surface-1:      #fcfcfb;
+  --page:           #f9f9f7;
+  --text-primary:   #0b0b0b;
+  --text-secondary: #52514e;
+  --text-muted:     #898781;
+  --gridline:       #e1e0d9;
+  --baseline:       #c3c2b7;
+  --border:         rgba(11, 11, 11, 0.10);
+
+  --series-real:    #2a78d6;
+  --series-fake:    #e34948;
+
+  --status-good:      #0ca30c;
+  --status-warning:   #fab219;
+  --status-serious:   #ec835a;
+  --status-critical:  #d03b3b;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    color-scheme: dark;
+    --surface-1:      #1a1a19;
+    --page:           #0d0d0d;
+    --text-primary:   #ffffff;
+    --text-secondary: #c3c2b7;
+    --text-muted:     #898781;
+    --gridline:       #2c2c2a;
+    --baseline:       #383835;
+    --border:         rgba(255, 255, 255, 0.10);
+
+    --series-real:    #3987e5;
+    --series-fake:    #e66767;
+
+    --status-good:      #0ca30c;
+    --status-warning:   #fab219;
+    --status-serious:   #ec835a;
+    --status-critical:  #d03b3b;
+  }
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+  background: var(--page);
+  color: var(--text-primary);
+  line-height: 1.5;
+}
+
+.site-header {
+  padding: 2rem 1.5rem 1rem;
+  text-align: center;
+}
+.site-header h1 { margin: 0 0 0.25rem; font-size: 1.5rem; }
+.tagline { color: var(--text-secondary); margin: 0; }
+
+.site-main {
+  max-width: 720px;
+  margin: 0 auto;
+  padding: 0 1.5rem 3rem;
+}
+
+.site-footer {
+  text-align: center;
+  color: var(--text-muted);
+  font-size: 0.8rem;
+  padding: 1.5rem;
+}
+
+.submission-card,
+.result-card {
+  background: var(--surface-1);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 1.5rem;
+}
+
+.submission-form { display: flex; flex-direction: column; gap: 0.35rem; }
+.submission-form label { font-weight: 600; margin-top: 0.75rem; }
+.submission-form .optional { font-weight: 400; color: var(--text-muted); font-size: 0.85rem; }
+.submission-form input,
+.submission-form textarea {
+  font: inherit;
+  padding: 0.6rem 0.75rem;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--page);
+  color: var(--text-primary);
+  resize: vertical;
+}
+.or-divider {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  color: var(--text-muted);
+  font-size: 0.85rem;
+  margin: 1rem 0 0.25rem;
+}
+.or-divider::before,
+.or-divider::after {
+  content: "";
+  flex: 1;
+  height: 1px;
+  background: var(--gridline);
+}
+.submission-form button {
+  margin-top: 1.25rem;
+  padding: 0.7rem 1rem;
+  font: inherit;
+  font-weight: 600;
+  border: none;
+  border-radius: 8px;
+  background: var(--series-real);
+  color: #ffffff;
+  cursor: pointer;
+}
+.submission-form button:hover { opacity: 0.9; }
+
+.alert {
+  padding: 0.75rem 1rem;
+  border-radius: 8px;
+  margin-bottom: 1rem;
+  font-size: 0.9rem;
+}
+.alert-error {
+  background: color-mix(in srgb, var(--status-critical) 12%, var(--surface-1));
+  color: var(--status-critical);
+  border: 1px solid var(--status-critical);
+}
+.alert-warning {
+  background: color-mix(in srgb, var(--status-warning) 15%, var(--surface-1));
+  color: var(--text-primary);
+  border: 1px solid var(--status-warning);
+}
+
+.verdict {
+  display: flex;
+  align-items: baseline;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+.verdict-label { font-size: 1.75rem; font-weight: 700; }
+.verdict-real .verdict-label { color: var(--series-real); }
+.verdict-fake .verdict-label { color: var(--series-fake); }
+.verdict-confidence { color: var(--text-secondary); font-size: 1.1rem; }
+
+.badge {
+  display: inline-block;
+  margin-top: 0.75rem;
+  padding: 0.4rem 0.75rem;
+  border-radius: 999px;
+  font-size: 0.85rem;
+  background: color-mix(in srgb, var(--status-warning) 20%, var(--surface-1));
+  color: var(--text-primary);
+  border: 1px solid var(--status-warning);
+}
+
+.note { color: var(--text-muted); font-size: 0.85rem; }
+
+.submitted-text {
+  background: var(--page);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 1rem;
+  white-space: pre-wrap;
+}
+.submitted-text mark { border-radius: 3px; padding: 0 1px; color: inherit; }
+
+.text-pager {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
+  margin-top: 0.6rem;
+}
+.text-pager button {
+  padding: 0.4rem 0.9rem;
+  font: inherit;
+  font-size: 0.85rem;
+  font-weight: 600;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface-1);
+  color: var(--series-real);
+  cursor: pointer;
+}
+.text-pager button:hover:not(:disabled) { background: var(--page); }
+.text-pager button:disabled {
+  color: var(--text-muted);
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+.text-pager-indicator {
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+  font-variant-numeric: tabular-nums;
+}
+
+.caveat {
+  margin-top: 1.5rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--gridline);
+  color: var(--text-muted);
+  font-size: 0.85rem;
+  font-style: italic;
+}
+
+.back-link {
+  display: inline-block;
+  margin-top: 1rem;
+  color: var(--series-real);
+  text-decoration: none;
+}
+.back-link:hover { text-decoration: underline; }
+
+/* Diverging bar chart — LIME top-10 features */
+.lime-chart { margin-top: 0.5rem; }
+.lime-chart-legend {
+  display: flex;
+  gap: 1.25rem;
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+  margin-bottom: 0.75rem;
+}
+.legend-item { display: inline-flex; align-items: center; gap: 0.4rem; }
+.swatch { width: 10px; height: 10px; border-radius: 2px; display: inline-block; }
+.swatch-real { background: var(--series-real); }
+.swatch-fake { background: var(--series-fake); }
+
+.lime-row {
+  display: grid;
+  grid-template-columns: 110px 1fr;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 3px 0;
+}
+.lime-label {
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+  text-align: right;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.lime-track {
+  display: flex;
+  align-items: center;
+  height: 24px;
+}
+.lime-half {
+  flex: 1 1 50%;
+  display: flex;
+  align-items: center;
+  min-width: 0;
+  gap: 6px;
+}
+.lime-half-real { justify-content: flex-end; }
+.lime-half-fake { justify-content: flex-start; }
+.lime-zero { width: 1px; align-self: stretch; background: var(--baseline); flex: 0 0 1px; }
+.lime-bar { height: 20px; min-width: 2px; }
+.lime-bar-real { background: var(--series-real); border-radius: 4px 0 0 4px; }
+.lime-bar-fake { background: var(--series-fake); border-radius: 0 4px 4px 0; }
+.lime-value {
+  font-size: 0.7rem;
+  color: var(--text-muted);
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+/* "Analysing news…" overlay, shown while the classify+LIME request is in
+   flight (a plain server-rendered POST, so this covers the wait until the
+   results page arrives). */
+.loading-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: color-mix(in srgb, var(--page) 82%, transparent);
+  backdrop-filter: blur(2px);
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+.loading-overlay.is-visible { display: flex; }
+.loading-box {
+  background: var(--surface-1);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 2rem 2.5rem;
+  max-width: 320px;
+  text-align: center;
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.2);
+}
+.loading-box p { margin: 0.35rem 0 0; }
+.loading-note { color: var(--text-muted); font-size: 0.8rem; }
+.spinner {
+  width: 36px;
+  height: 36px;
+  margin: 0 auto;
+  border: 3px solid var(--gridline);
+  border-top-color: var(--series-real);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) {
+  .spinner { animation-duration: 2.4s; }
+}

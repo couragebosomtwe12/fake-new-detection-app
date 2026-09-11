@@ -1,0 +1,30 @@
+__pycache__/
+*.pyc
+.pytest_cache/
+
+# Local runtime state
+app.db
+*.db
+
+# Credentials — never commit
+kaggle.json
+*.json.lck
+
+# Data and trained weights are never committed (see CLAUDE.md):
+# ISOT/LIAR data must be downloaded locally, and only results.json
+# (metadata/metrics) is committed — not model weights.
+data/*
+!data/.gitkeep
+!data/liar/
+results/*
+!results/.gitkeep
+!results/results.json
+!results/svm/
+!results/naive_bayes/
+
+# Colab training bundle — duplicate of app code, not needed in repo
+Google Colab/
+
+# Thesis documents — kept locally, not in the deploy repo
+documentation/*.docx
+documentation/*.pdf
