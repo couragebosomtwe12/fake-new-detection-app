@@ -9,40 +9,13 @@
   </div>
   {% endif %}
 
-  {% if is_trusted_source_override %}
-  <div class="alert alert-info" role="alert">
-    <strong>Trusted source: {{ trusted_source_name or 'Verified news source' }}</strong>
-  </div>
+  <p class="result-source"><strong>Source:</strong> <span class="source-name">{{ source_display }}</span></p>
+
+  {% if headline %}
+  <p class="result-headline"><strong>Headline:</strong> {{ headline }}</p>
   {% endif %}
 
-  {# Temporarily disabled for screenshots (2026-08-13) — re-enable afterwards.
-  {% if is_demo_override %}
-  <div class="alert alert-warning" role="alert">
-    This demo serves {{ model_name }} rather than BERT &mdash; BERT is this project's
-    best-performing model (Table 4.1), but LIME re-queries it roughly 1,000 times per
-    explanation, which does not complete in a practical time on CPU-only hardware (a documented
-    limitation, Section 3.15.4). {{ model_name }} was chosen because its LIME explanation
-    latency has been directly measured (Table 4.4), so this demonstration responds in seconds
-    rather than several minutes.
-  </div>
-  {% endif %}
-  #}
-
-  <div class="verdict verdict-{{ label }}">
-    <span class="verdict-label">{{ label_display }}</span>
-    <span class="verdict-confidence">{{ confidence_pct }}% confidence</span>
-  </div>
-
-  {% if is_low_confidence %}
-  <p class="badge badge-low-confidence">Low confidence &mdash; this result sits close to the decision boundary.</p>
-  {% endif %}
-
-  {% if cache_hit %}
-  <p class="note">Identical text was analysed before &mdash; showing the cached result.</p>
-  {% endif %}
-
-  <h2>Submitted text</h2>
-  <div class="submitted-text" id="submitted-text">{{ highlighted_body|safe }}</div>
+  <div class="submitted-text" id="submitted-text">{{ body }}</div>
   <div class="text-pager" id="text-pager" hidden>
     <button type="button" id="text-pager-prev">&larr; Prev</button>
     <span class="text-pager-indicator" id="text-pager-indicator"></span>
@@ -50,11 +23,6 @@
   </div>
   <script>
     (function () {
-      // Paginates the submitted-text box so a long article doesn't force a
-      // long page scroll. Splits on blank-line paragraph breaks, which
-      // never fall inside a <mark> highlight span (those wrap single
-      // tokens), so the highlighting survives the split intact. Short
-      // submissions are left exactly as rendered — no pager shown.
       var container = document.getElementById('submitted-text');
       var pager = document.getElementById('text-pager');
       var prevBtn = document.getElementById('text-pager-prev');
@@ -95,37 +63,63 @@
     })();
   </script>
 
-  <h2>Top contributing features</h2>
-  <div class="viz-root lime-chart">
-    <div class="lime-chart-legend">
-      <span class="legend-item"><i class="swatch swatch-real"></i>Pushes toward Real</span>
-      <span class="legend-item"><i class="swatch swatch-fake"></i>Pushes toward Fake</span>
-    </div>
-    <div class="lime-chart-body">
-      {% for row in chart_data %}
-      <div class="lime-row">
-        <div class="lime-label">{{ row.token }}</div>
-        <div class="lime-track">
-          <div class="lime-half lime-half-real">
-            {% if row.direction == 'real' %}
-            <span class="lime-value">{{ "%.3f"|format(row.weight) }}</span>
-            <div class="lime-bar lime-bar-real" style="width: {{ row.pct }}%;"></div>
-            {% endif %}
-          </div>
-          <div class="lime-zero"></div>
-          <div class="lime-half lime-half-fake">
-            {% if row.direction == 'fake' %}
-            <div class="lime-bar lime-bar-fake" style="width: {{ row.pct }}%;"></div>
-            <span class="lime-value">{{ "%+.3f"|format(row.weight) }}</span>
-            {% endif %}
-          </div>
-        </div>
-      </div>
-      {% endfor %}
-    </div>
-  </div>
+  <p class="source-confidence">
+    <strong>Source confidence:</strong>
+    {% if is_trusted_source_override %}
+    <span class="sc-trusted">TRUSTED</span>
+    {% else %}
+    <span class="sc-unknown">UNKNOWN</span>
+    {% endif %}
+  </p>
 
-  {% if fc_enabled %}
+  <p class="conf-label">News confidence level</p>
+  <div class="conf-bar" role="img" aria-label="{{ 'Real' if label == 'real' else 'Fake' }}, {{ confidence_pct }}% confidence">
+    <div class="conf-fill {{ 'conf-fill-real' if label == 'real' else 'conf-fill-fake' }}"
+         id="conf-fill" data-target="{{ confidence_pct }}" style="width: 0%;"></div>
+    <span class="conf-text" id="conf-text">{{ 'REAL' if label == 'real' else 'FAKE' }} 0%</span>
+    <span class="conf-thumb" id="conf-thumb">{{ '👍' if label == 'real' else '👎' }}</span>
+  </div>
+  <script>
+    (function () {
+      var fill = document.getElementById('conf-fill');
+      var text = document.getElementById('conf-text');
+      var thumb = document.getElementById('conf-thumb');
+      if (!fill) return;
+      var target = parseFloat(fill.getAttribute('data-target'));
+      var label = fill.classList.contains('conf-fill-real') ? 'REAL' : 'FAKE';
+      var duration = 1200;
+
+      // Animate width + count the percentage up over the same duration.
+      var start = null;
+      function step(ts) {
+        if (start === null) start = ts;
+        var t = Math.min((ts - start) / duration, 1);
+        var current = target * t;
+        fill.style.width = current + '%';
+        text.textContent = label + ' ' + current.toFixed(1) + '%';
+        if (t < 1) {
+          requestAnimationFrame(step);
+        } else {
+          text.textContent = label + ' ' + target.toFixed(1) + '%';
+          thumb.classList.add('conf-thumb-show');
+        }
+      }
+      requestAnimationFrame(step);
+    })();
+  </script>
+
+  {% if is_low_confidence %}
+  <p class="badge badge-low-confidence">Low confidence &mdash; this result sits close to the decision boundary.</p>
+  {% endif %}
+
+  {% if cache_hit %}
+  <p class="note">Identical text was analysed before &mdash; showing the cached result.</p>
+  {% endif %}
+
+  {% if is_internal_source %}
+  <h2>External fact-checks</h2>
+  <p class="note">Internal</p>
+  {% elif fc_enabled and not is_trusted_source_override %}
   <h2>External fact-checks</h2>
   {% if fc_matches %}
   <div class="fc-list">
@@ -145,7 +139,6 @@
   {% endif %}
   {% endif %}
 
-  <p class="caveat">{{ caveat }}</p>
   <a href="/" class="back-link">&larr; Analyse another article</a>
 </section>
 {% endblock %}

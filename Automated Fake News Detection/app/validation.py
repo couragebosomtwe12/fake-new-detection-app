@@ -127,7 +127,7 @@ TRUSTED_SOURCE_NAMES = {
     "starrfm.com.gh": "Starr FM",
     "classfmonline.com": "Class FM",
     "gna.org.gh": "Ghana News Agency",
-    "gctu.edu.gh": "GCTU",
+    "gctu.edu.gh": "Ghana Communication Technology University",
     "ug.edu.gh": "University of Ghana",
     "knust.edu.gh": "KNUST",
     "ucc.edu.gh": "University of Cape Coast",
@@ -170,6 +170,13 @@ def trusted_source_name(source_url: str | None) -> str | None:
     """Return the display name of the trusted source for a URL, or None."""
     domain = _match_trusted_domain(source_url)
     return TRUSTED_SOURCE_NAMES.get(domain) if domain else None
+
+
+def is_internal_source(source_url: str | None) -> bool:
+    """University sources publish internal institutional news — external
+    fact-checkers don't cover them, so the check is marked 'Internal'."""
+    domain = _match_trusted_domain(source_url)
+    return bool(domain and ".edu." in domain)
 
 
 class ValidationError(Exception):
