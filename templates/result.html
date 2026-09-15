@@ -119,9 +119,8 @@
   {% if is_internal_source %}
   <h2>External fact-checks</h2>
   <p class="note">Internal</p>
-  {% elif fc_enabled and not is_trusted_source_override %}
+  {% elif fc_enabled and fc_matches %}
   <h2>External fact-checks</h2>
-  {% if fc_matches %}
   <div class="fc-list">
     {% for m in fc_matches %}
     <div class="fc-item">
@@ -134,9 +133,6 @@
     </div>
     {% endfor %}
   </div>
-  {% else %}
-  <p class="note">No published fact-checks found matching this article's central claim.</p>
-  {% endif %}
   {% endif %}
 
   <a href="/" class="back-link">&larr; Analyse another article</a>

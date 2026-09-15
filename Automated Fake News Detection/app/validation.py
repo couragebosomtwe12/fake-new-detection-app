@@ -264,19 +264,27 @@ def fetch_article_from_url(url: str, timeout: int = URL_TIMEOUT_SECONDS) -> tupl
 
     html_source = None
     try:
+        import requests
         import trafilatura
 
-        downloaded = trafilatura.fetch_url(url)
-        if downloaded:
-            html_source = downloaded
+        # Download via requests so the fetch is bounded by our timeout —
+        # trafilatura's own fetch_url has no enforced cap and can stall on
+        # heavy pages (liveblogs) for tens of seconds.
+        resp = requests.get(
+            url,
+            timeout=timeout,
+            headers={"User-Agent": "Mozilla/5.0 (compatible; FakeNewsDetector/1.0)"},
+        )
+        if resp.ok:
+            html_source = resp.text
             body = trafilatura.extract(
-                downloaded,
+                html_source,
                 include_comments=False,
                 include_tables=False,
                 favor_recall=True,
             )
             if body and body.strip():
-                metadata = trafilatura.extract_metadata(downloaded)
+                metadata = trafilatura.extract_metadata(html_source)
                 title = metadata.title if metadata and metadata.title else ""
                 return title, body
     except ImportError:

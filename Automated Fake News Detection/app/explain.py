@@ -11,7 +11,8 @@ from dataclasses import dataclass
 
 from app.classifier import Classifier
 
-NUM_SAMPLES = 1000  # fewer was visibly unstable in testing (Section 3.15)
+NUM_SAMPLES = 500  # halved for faster explanations on CPU-only hosting;
+                   # still stable enough for a demo (see Section 3.15)
 NUM_FEATURES = 10
 CLASS_NAMES = ["Real", "Fake"]
 RANDOM_STATE = 42

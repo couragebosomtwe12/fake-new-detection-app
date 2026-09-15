@@ -151,13 +151,12 @@ def analyze(
 
     # External fact-check lookup runs concurrently with classification —
     # it's an independent signal, not part of the model verdict. Skipped
-    # for trusted sources: their verdict is already Real and external
-    # checkers rarely cover institutional/local news anyway.
+    # for internal (university) sources, which external checkers don't cover.
     from concurrent.futures import ThreadPoolExecutor
 
     fc_executor = ThreadPoolExecutor(max_workers=1)
     fc_future = None
-    if not is_trusted_source(submission.source_url):
+    if not is_internal_source(submission.source_url):
         fc_future = fc_executor.submit(
             search_fact_checks, build_query(submission.headline, submission.body)
         )
@@ -195,15 +194,22 @@ def analyze(
             )
         else:
             result = classifier.classify(submission.body)
-            
+            trusted = is_trusted_source(submission.source_url)
+
             # Override classification for trusted sources
-            if is_trusted_source(submission.source_url):
+            if trusted:
                 result.label = "real"
                 result.label_display = "Likely Real"
                 result.confidence = _trusted_confidence(submission.body)
                 result.is_low_confidence = False
-            
-            explanation = explain(submission.body, classifier)
+
+            # Skip LIME for trusted sources — the verdict is forced Real
+            # regardless, so the explanation is decorative and the ~500
+            # model calls are wasted latency on free-tier CPUs.
+            explanation = (
+                ExplanationResult(tokens=[]) if trusted
+                else explain(submission.body, classifier)
+            )
 
             is_trusted_override = is_trusted_source(submission.source_url)
             
