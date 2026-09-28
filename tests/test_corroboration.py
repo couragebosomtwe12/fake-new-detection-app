@@ -97,3 +97,21 @@ def test_explicit_negation_is_marked_as_conflicting(monkeypatch):
     result = search_corroboration("Eliud Kipchoge Nike shoes banned")
     assert len(result.reports) == 1
     assert result.reports[0].stance == "conflicts"
+
+
+def test_mixed_negation_title_is_related_rather_than_conflicting(monkeypatch):
+    configure(monkeypatch)
+    payload = {
+        "items": [
+            {
+                "title": "Nike Vaporfly shoes are not banned but Eliud Kipchoge's are",
+                "link": "https://myjoyonline.com/sports/shoes",
+                "displayLink": "myjoyonline.com",
+                "snippet": "The rules distinguish the public model from prototypes.",
+            }
+        ]
+    }
+    monkeypatch.setattr(requests, "get", lambda *args, **kwargs: Response(payload=payload))
+    result = search_corroboration("Eliud Kipchoge Nike shoes banned")
+    assert len(result.reports) == 1
+    assert result.reports[0].stance == "related"

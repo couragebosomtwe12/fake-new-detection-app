@@ -107,8 +107,10 @@ def _stance(query: str, title: str, snippet: str) -> Literal["supports", "confli
     title_tokens = _tokens(title)
     if "?" in title or title_tokens & _UNCERTAINTY:
         return "related"
+    if title_tokens & _NEGATIONS and re.search(r"\b(but|however|although|while)\b", title, re.IGNORECASE):
+        return "related"
     query_negative = bool(_tokens(query) & _NEGATIONS)
-    result_negative = bool(_tokens(f"{title} {snippet}") & _NEGATIONS)
+    result_negative = bool(title_tokens & _NEGATIONS)
     return "conflicts" if query_negative != result_negative else "supports"
 
 
