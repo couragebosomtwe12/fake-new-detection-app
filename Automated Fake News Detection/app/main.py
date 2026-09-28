@@ -7,7 +7,6 @@ standing caveat on every single result.
 """
 from __future__ import annotations
 
-import os
 from pathlib import Path
 
 from fastapi import FastAPI, Form, Request
@@ -17,9 +16,10 @@ from fastapi.templating import Jinja2Templates
 
 from app import database as db
 from app.classifier import Classifier
+from app.corroboration import search_corroboration
 from app.evidence import build_evidence_assessment
 from app.explain import ExplanationResult, TokenWeight, explain
-from app.factcheck import build_query, search_fact_checks
+from app.factcheck import FactCheckResult, build_query, search_fact_checks
 from app.highlight import build_highlighted_html
 from app.validation import (
     ValidationError,
@@ -149,12 +149,14 @@ def analyze(
     # for internal (university) sources, which external checkers don't cover.
     from concurrent.futures import ThreadPoolExecutor
 
-    fc_executor = ThreadPoolExecutor(max_workers=1)
+    evidence_executor = ThreadPoolExecutor(max_workers=2)
+    query = build_query(submission.headline, submission.body)
     fc_future = None
     if not is_internal_source(submission.source_url):
-        fc_future = fc_executor.submit(
-            search_fact_checks, build_query(submission.headline, submission.body)
-        )
+        fc_future = evidence_executor.submit(search_fact_checks, query)
+    corroboration_future = evidence_executor.submit(
+        search_corroboration, query, submission.source_url
+    )
 
     conn = db.get_connection()
     try:
@@ -167,9 +169,19 @@ def analyze(
                 cached = None
         if cached is not None:
             source_trusted = is_trusted_source(submission.source_url)
-            fc_matches = fc_future.result() if fc_future else []
+            fact_check_result = (
+                fc_future.result() if fc_future else FactCheckResult(status="success", matches=[])
+            )
+            corroboration_result = corroboration_future.result()
             context = _render_context(
-                submission, cached, explanation_rows, model_row, True, source_trusted, fc_matches
+                submission,
+                cached,
+                explanation_rows,
+                model_row,
+                True,
+                source_trusted,
+                fact_check_result,
+                corroboration_result,
             )
         else:
             result = classifier.classify(submission.body)
@@ -194,13 +206,23 @@ def analyze(
             db.record_explanations(conn, analysis_id, [(t.token, t.weight) for t in explanation.tokens])
             analysis_row = db.get_analysis(conn, analysis_id)
             explanation_rows = db.get_explanations(conn, analysis_id)
-            fc_matches = fc_future.result() if fc_future else []
+            fact_check_result = (
+                fc_future.result() if fc_future else FactCheckResult(status="success", matches=[])
+            )
+            corroboration_result = corroboration_future.result()
             context = _render_context(
-                submission, analysis_row, explanation_rows, model_row, False, source_trusted, fc_matches
+                submission,
+                analysis_row,
+                explanation_rows,
+                model_row,
+                False,
+                source_trusted,
+                fact_check_result,
+                corroboration_result,
             )
     finally:
         conn.close()
-        fc_executor.shutdown(wait=False)
+        evidence_executor.shutdown(wait=False)
 
     return templates.TemplateResponse(request, "result.html", context)
 
@@ -211,8 +233,9 @@ def _render_context(
     explanation_rows,
     model_row,
     cache_hit: bool,
-    source_trusted: bool = False,
-    fc_matches: list | None = None,
+    source_trusted,
+    fact_check_result,
+    corroboration_result,
 ) -> dict:
     tokens = [TokenWeight(token=r["token"], weight=r["weight"]) for r in explanation_rows]
     max_weight = max((abs(t.weight) for t in tokens), default=1.0) or 1.0
@@ -241,18 +264,16 @@ def _render_context(
         source_display = urlparse(url).netloc.removeprefix("www.") or url
     else:
         source_display = "Pasted text"
-    matches = fc_matches or []
     internal_source = is_internal_source(submission.source_url) or is_internal_source(
         analysis_row["source_url"]
     )
-    fact_check_enabled = bool(os.environ.get("GOOGLE_FACTCHECK_API_KEY"))
     evidence = build_evidence_assessment(
         headline=submission.headline,
         body=submission.body,
         source_trusted=source_trusted,
         internal_source=internal_source,
-        fact_check_enabled=fact_check_enabled,
-        fact_check_matches=matches,
+        fact_check_result=fact_check_result,
+        corroboration_result=corroboration_result,
     )
     return {
         "caveat": STANDING_CAVEAT,
@@ -271,11 +292,11 @@ def _render_context(
         "source_display": source_display,
         "source_reputation": evidence.source_reputation,
         "is_internal_source": internal_source,
-        "fc_matches": matches,
-        "fc_enabled": fact_check_enabled,
+        "fc_matches": fact_check_result.matches,
         "fact_check_status": evidence.fact_check_status,
         "correction_status": evidence.correction_status,
         "corroboration_status": evidence.corroboration_status,
+        "corroboration_reports": corroboration_result.reports,
         "final_label": evidence.final_label,
         "final_tone": evidence.final_tone,
         "final_reason": evidence.reason,

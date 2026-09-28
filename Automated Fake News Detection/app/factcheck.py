@@ -42,6 +42,12 @@ class FactCheckMatch:
         return "mixed"
 
 
+@dataclass(frozen=True)
+class FactCheckResult:
+    status: str
+    matches: list[FactCheckMatch]
+
+
 def _rating_is_false(rating: str) -> bool:
     """Heuristic: does this rating indicate the claim is false/misleading?"""
     r = rating.lower()
@@ -60,14 +66,13 @@ def _rating_is_true(rating: str) -> bool:
     ) and "not true" not in r and "untrue" not in r
 
 
-def search_fact_checks(query: str, max_results: int = MAX_RESULTS) -> list[FactCheckMatch]:
-    """Search published fact-checks matching a claim query.
-
-    Returns [] when no API key is configured, the request fails, or no
-    fact-checks match — the feature degrades silently."""
+def search_fact_checks(query: str, max_results: int = MAX_RESULTS) -> FactCheckResult:
+    """Search published fact-checks and preserve lookup failures."""
     api_key = os.environ.get(API_KEY_ENV)
-    if not api_key or not query.strip():
-        return []
+    if not api_key:
+        return FactCheckResult(status="not_configured", matches=[])
+    if not query.strip():
+        return FactCheckResult(status="success", matches=[])
 
     import requests
 
@@ -83,10 +88,10 @@ def search_fact_checks(query: str, max_results: int = MAX_RESULTS) -> list[FactC
             timeout=TIMEOUT_SECONDS,
         )
         if resp.status_code != 200:
-            return []
+            return FactCheckResult(status="failed", matches=[])
         claims = resp.json().get("claims", [])
-    except Exception:
-        return []
+    except (requests.RequestException, ValueError):
+        return FactCheckResult(status="failed", matches=[])
 
     matches: list[FactCheckMatch] = []
     for claim in claims:
@@ -104,7 +109,7 @@ def search_fact_checks(query: str, max_results: int = MAX_RESULTS) -> list[FactC
             )
         if len(matches) >= max_results:
             break
-    return matches[:max_results]
+    return FactCheckResult(status="success", matches=matches[:max_results])
 
 
 def fact_check_verdict(matches: list[FactCheckMatch]) -> str | None:

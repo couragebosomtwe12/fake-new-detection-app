@@ -123,7 +123,7 @@
   {% if is_internal_source %}
   <h2>External fact-checks</h2>
   <p class="note">Internal</p>
-  {% elif fc_enabled and fc_matches %}
+  {% elif fc_matches %}
   <h2>External fact-checks</h2>
   <div class="fc-list">
     {% for m in fc_matches %}
@@ -135,6 +135,22 @@
       <p class="fc-claim">&ldquo;{{ m.claim }}&rdquo;{% if m.claimant %} &mdash; {{ m.claimant }}{% endif %}</p>
       {% if m.review_url %}<a class="fc-link" href="{{ m.review_url }}" target="_blank" rel="noopener">Read the fact-check &rarr;</a>{% endif %}
     </div>
+    {% endfor %}
+  </div>
+  {% endif %}
+
+  {% if corroboration_reports %}
+  <h2>Independent reports</h2>
+  <div class="corroboration-list">
+    {% for report in corroboration_reports %}
+    <article class="corroboration-item">
+      <div class="corroboration-heading">
+        <span class="corroboration-stance corroboration-{{ report.stance }}">{{ report.stance|upper }}</span>
+        <span class="corroboration-publisher">{{ report.publisher }} &middot; {{ report.source_kind|replace('_', ' ')|title }}</span>
+      </div>
+      <p>{{ report.title }}</p>
+      <a href="{{ report.url }}" target="_blank" rel="noopener noreferrer">Read the independent source &rarr;</a>
+    </article>
     {% endfor %}
   </div>
   {% endif %}

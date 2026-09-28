@@ -1,5 +1,6 @@
+from app.corroboration import CorroboratingReport, CorroborationResult
 from app.evidence import build_evidence_assessment, detect_correction
-from app.factcheck import FactCheckMatch
+from app.factcheck import FactCheckMatch, FactCheckResult
 
 
 def match(rating, publisher="GhanaFact"):
@@ -13,14 +14,27 @@ def match(rating, publisher="GhanaFact"):
     )
 
 
-def assess(matches=None, **overrides):
+def report(publisher, stance="supports"):
+    domain = publisher.lower().replace(" ", "") + ".com"
+    return CorroboratingReport(
+        title="Independent report about the same central claim",
+        publisher=publisher,
+        url=f"https://{domain}/report",
+        domain=domain,
+        snippet="The report describes the same event.",
+        stance=stance,
+        source_kind="reputable_news",
+    )
+
+
+def assess(matches=None, reports=None, **overrides):
     values = {
         "headline": "A sufficiently descriptive news headline",
         "body": "This article reports a central public claim with enough surrounding text for assessment.",
         "source_trusted": False,
         "internal_source": False,
-        "fact_check_enabled": True,
-        "fact_check_matches": matches or [],
+        "fact_check_result": FactCheckResult(status="success", matches=matches or []),
+        "corroboration_result": CorroborationResult(status="success", reports=reports or []),
     }
     values.update(overrides)
     return build_evidence_assessment(**values)
@@ -59,13 +73,33 @@ def test_contradictory_fact_checks_produce_disputed_assessment():
     assert result.final_tone == "mixed"
 
 
-def test_correction_notice_takes_precedence_over_fact_check():
+def test_correction_notice_takes_precedence_over_other_evidence():
     result = assess(
         [match("True")],
+        [report("Reuters"), report("BBC News")],
         headline="Correction: Publisher amends inaccurate report",
     )
     assert result.correction_status == "CORRECTION DETECTED"
     assert result.final_label == "CORRECTED"
+
+
+def test_two_independent_supporting_reports_produce_likely_real():
+    result = assess(reports=[report("Reuters"), report("BBC News")])
+    assert result.corroboration_status == "FOUND — 2 SUPPORTING SOURCES"
+    assert result.final_label == "LIKELY REAL"
+    assert "Reuters and BBC News" in result.reason
+
+
+def test_one_supporting_report_is_not_enough_for_final_confirmation():
+    result = assess(reports=[report("Reuters")])
+    assert result.final_label == "UNVERIFIED"
+    assert "one independent source is insufficient" in result.reason
+
+
+def test_conflicting_report_produces_disputed_assessment():
+    result = assess(reports=[report("Reuters"), report("BBC News", "conflicts")])
+    assert result.final_label == "DISPUTED"
+    assert result.corroboration_status == "CONFLICTING — 1 SUPPORTING, 1 OPPOSING"
 
 
 def test_trusted_source_without_independent_evidence_remains_unverified():
@@ -75,11 +109,26 @@ def test_trusted_source_without_independent_evidence_remains_unverified():
     assert "source reputation does not verify" in result.reason
 
 
-def test_missing_api_key_is_distinct_from_no_match():
-    unavailable = assess(fact_check_enabled=False)
-    no_match = assess(fact_check_enabled=True)
+def test_fact_check_statuses_are_distinct():
+    unavailable = assess(
+        fact_check_result=FactCheckResult(status="not_configured", matches=[])
+    )
+    failed = assess(fact_check_result=FactCheckResult(status="failed", matches=[]))
+    no_match = assess()
     assert unavailable.fact_check_status == "NOT CONFIGURED"
+    assert failed.fact_check_status == "LOOKUP FAILED"
     assert no_match.fact_check_status == "NO MATCH FOUND"
+
+
+def test_corroboration_statuses_are_distinct():
+    unavailable = assess(
+        corroboration_result=CorroborationResult(status="not_configured", reports=[])
+    )
+    failed = assess(corroboration_result=CorroborationResult(status="failed", reports=[]))
+    no_match = assess()
+    assert unavailable.corroboration_status == "NOT CONFIGURED"
+    assert failed.corroboration_status == "LOOKUP FAILED"
+    assert no_match.corroboration_status == "NO SUPPORTING REPORTS"
 
 
 def test_internal_source_is_reported_without_external_fact_check_claim():
@@ -87,8 +136,3 @@ def test_internal_source_is_reported_without_external_fact_check_claim():
     assert result.source_reputation == "INTERNAL"
     assert result.fact_check_status == "INTERNAL SOURCE"
     assert result.final_label == "UNVERIFIED"
-
-
-def test_corroboration_is_not_claimed_without_a_provider():
-    result = assess([match("True")])
-    assert result.corroboration_status == "NOT CHECKED"

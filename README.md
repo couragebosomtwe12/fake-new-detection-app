@@ -136,7 +136,9 @@ docker run --rm -p 7860:7860 -e DEMO_MODEL=bert fake-news-detector
 
 | Variable | Default | Purpose |
 |----------|---------|---------|
-| `GOOGLE_FACTCHECK_API_KEY` | unset | Google Cloud API key for the Fact Check Tools API. When set, the result page shows a "External fact-checks" section listing published reviews (Snopes, PolitiFact, AFP, etc.) matching the article's central claim. When unset the section is hidden — classification is unaffected. Create a free key: console.cloud.google.com → enable "Fact Check Tools API" → Credentials → API key. |
+| `GOOGLE_FACTCHECK_API_KEY` | unset | Google Cloud API key used by Fact Check Tools and, unless `GOOGLE_CSE_API_KEY` is set, Custom Search. Enable both APIs on the key's project. |
+| `GOOGLE_CSE_ID` | unset | Programmable Search Engine ID used to find independent reputable or official reports. Configure the engine to search the entire web. |
+| `GOOGLE_CSE_API_KEY` | unset | Optional separate Custom Search JSON API key. When omitted, `GOOGLE_FACTCHECK_API_KEY` is reused. |
 | `DEMO_MODEL` | Not used | Legacy variable - SVM is now the default for production use |
 
 ---
