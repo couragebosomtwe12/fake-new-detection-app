@@ -17,10 +17,18 @@ from fastapi.templating import Jinja2Templates
 
 from app import database as db
 from app.classifier import Classifier
+from app.evidence import build_evidence_assessment
 from app.explain import ExplanationResult, TokenWeight, explain
-from app.factcheck import build_query, fact_check_verdict, search_fact_checks
+from app.factcheck import build_query, search_fact_checks
 from app.highlight import build_highlighted_html
-from app.validation import ValidationError, fetch_article_from_url, validate_submission, is_trusted_source, trusted_source_name, is_internal_source, TRUSTED_SOURCES
+from app.validation import (
+    ValidationError,
+    fetch_article_from_url,
+    is_internal_source,
+    is_trusted_source,
+    trusted_source_name,
+    validate_submission,
+)
 
 BASE_DIR = Path(__file__).resolve().parent.parent.parent
 STANDING_CAVEAT = (
@@ -135,19 +143,6 @@ def analyze(
             },
             status_code=422,
         )
-    except ValidationError as exc:
-        return templates.TemplateResponse(
-            request,
-            "index.html",
-            {
-                "caveat": STANDING_CAVEAT,
-                "error": exc.message,
-                "headline": headline,
-                "body": body,
-                "source_url": source_url or "",
-            },
-            status_code=422,
-        )
 
     # External fact-check lookup runs concurrently with classification —
     # it's an independent signal, not part of the model verdict. Skipped
@@ -168,51 +163,23 @@ def analyze(
         if cached is not None:
             explanation_rows = db.get_explanations(conn, cached["analysis_id"])
             model_row = db.get_model(conn, cached["model_id"])
-            # Results recorded while the dev placeholder was active have no
-            # evidentiary value — re-analyse with the real loaded model rather
-            # than serving a stale placeholder verdict from cache.
-            if model_row and model_row["is_placeholder"]:
+            if (model_row and model_row["is_placeholder"]) or is_trusted_source(cached["source_url"]):
                 cached = None
         if cached is not None:
-            # Check both the current submission's URL and the cached record's
-            # URL — either being trusted is enough to apply the override.
-            is_trusted_override = (
-                is_trusted_source(submission.source_url)
-                or is_trusted_source(cached["source_url"])
-            )
-            # Apply whitelist override to cached results too — a cached FAKE
-            # verdict from before the whitelist existed must not be shown for
-            # a trusted source.
-            if is_trusted_override and cached["predicted_label"] == db.LABEL_FAKE:
-                cached = dict(cached)
-                cached["predicted_label"] = db.LABEL_REAL
-                cached["confidence"] = _trusted_confidence(submission.body)
-                cached["is_low_confidence"] = 0
+            source_trusted = is_trusted_source(submission.source_url)
             fc_matches = fc_future.result() if fc_future else []
             context = _render_context(
-                submission, cached, explanation_rows, model_row, True, is_trusted_override, fc_matches
+                submission, cached, explanation_rows, model_row, True, source_trusted, fc_matches
             )
         else:
             result = classifier.classify(submission.body)
-            trusted = is_trusted_source(submission.source_url)
-
-            # Override classification for trusted sources
-            if trusted:
-                result.label = "real"
-                result.label_display = "Likely Real"
-                result.confidence = _trusted_confidence(submission.body)
-                result.is_low_confidence = False
-
-            # Skip LIME for trusted sources — the verdict is forced Real
-            # regardless, so the explanation is decorative and the ~500
-            # model calls are wasted latency on free-tier CPUs.
+            source_trusted = is_trusted_source(submission.source_url)
             explanation = (
-                ExplanationResult(tokens=[]) if trusted
+                ExplanationResult(tokens=[])
+                if source_trusted
                 else explain(submission.body, classifier)
             )
 
-            is_trusted_override = is_trusted_source(submission.source_url)
-            
             model_row = db.get_active_model(conn, classifier.model.family)
             analysis_id = db.record_analysis(
                 conn,
@@ -229,27 +196,23 @@ def analyze(
             explanation_rows = db.get_explanations(conn, analysis_id)
             fc_matches = fc_future.result() if fc_future else []
             context = _render_context(
-                submission, analysis_row, explanation_rows, model_row, False, is_trusted_override, fc_matches
+                submission, analysis_row, explanation_rows, model_row, False, source_trusted, fc_matches
             )
     finally:
         conn.close()
+        fc_executor.shutdown(wait=False)
 
     return templates.TemplateResponse(request, "result.html", context)
 
 
-def _trusted_confidence(body: str) -> float:
-    """Deterministic 95-100% confidence for trusted-source overrides —
-    derived from the text hash so the same article always shows the same
-    value rather than a random one."""
-    import hashlib
-
-    digest = hashlib.sha256(body.encode()).hexdigest()
-    return 0.95 + (int(digest[:8], 16) % 51) / 1000  # 0.950 - 1.000
-
-
 def _render_context(
-    submission, analysis_row, explanation_rows, model_row, cache_hit: bool,
-    is_trusted_source_override: bool = False, fc_matches: list | None = None,
+    submission,
+    analysis_row,
+    explanation_rows,
+    model_row,
+    cache_hit: bool,
+    source_trusted: bool = False,
+    fc_matches: list | None = None,
 ) -> dict:
     tokens = [TokenWeight(token=r["token"], weight=r["weight"]) for r in explanation_rows]
     max_weight = max((abs(t.weight) for t in tokens), default=1.0) or 1.0
@@ -278,6 +241,19 @@ def _render_context(
         source_display = urlparse(url).netloc.removeprefix("www.") or url
     else:
         source_display = "Pasted text"
+    matches = fc_matches or []
+    internal_source = is_internal_source(submission.source_url) or is_internal_source(
+        analysis_row["source_url"]
+    )
+    fact_check_enabled = bool(os.environ.get("GOOGLE_FACTCHECK_API_KEY"))
+    evidence = build_evidence_assessment(
+        headline=submission.headline,
+        body=submission.body,
+        source_trusted=source_trusted,
+        internal_source=internal_source,
+        fact_check_enabled=fact_check_enabled,
+        fact_check_matches=matches,
+    )
     return {
         "caveat": STANDING_CAVEAT,
         "headline": submission.headline,
@@ -291,13 +267,17 @@ def _render_context(
         "model_name": model_row["model_name"] if model_row else "unknown",
         "is_placeholder": bool(model_row["is_placeholder"]) if model_row else False,
         "cache_hit": cache_hit,
-        "is_trusted_source_override": is_trusted_source_override,
         "trusted_source_name": trusted_name,
         "source_display": source_display,
-        "is_internal_source": is_internal_source(submission.source_url)
-        or is_internal_source(analysis_row["source_url"]),
-        "fc_matches": fc_matches or [],
-        "fc_verdict": fact_check_verdict(fc_matches or []),
-        "fc_enabled": bool(os.environ.get("GOOGLE_FACTCHECK_API_KEY")),
-        "source_url": submission.source_url,
+        "source_reputation": evidence.source_reputation,
+        "is_internal_source": internal_source,
+        "fc_matches": matches,
+        "fc_enabled": fact_check_enabled,
+        "fact_check_status": evidence.fact_check_status,
+        "correction_status": evidence.correction_status,
+        "corroboration_status": evidence.corroboration_status,
+        "final_label": evidence.final_label,
+        "final_tone": evidence.final_tone,
+        "final_reason": evidence.reason,
+        "source_url": url,
     }

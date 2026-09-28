@@ -64,32 +64,32 @@
   </script>
 
   <p class="source-confidence">
-    <strong>Source confidence:</strong>
-    {% if is_trusted_source_override %}
-    <span class="sc-trusted">TRUSTED</span>
-    {% else %}
-    <span class="sc-unknown">UNKNOWN</span>
-    {% endif %}
+    <strong>Source reputation:</strong>
+    <span class="{{ 'sc-trusted' if source_reputation in ['TRUSTED', 'INTERNAL'] else 'sc-unknown' }}">{{ source_reputation }}</span>
   </p>
 
-  <p class="conf-label">News confidence level</p>
-  <div class="conf-bar" role="img" aria-label="{{ 'Real' if label == 'real' else 'Fake' }}, {{ confidence_pct }}% confidence">
+  <div class="evidence-summary">
+    <p><strong>Model assessment:</strong> <span class="assessment-{{ label }}">{{ label_display|upper }} &mdash; {{ confidence_pct }}%</span></p>
+    <p><strong>External fact-check:</strong> {{ fact_check_status }}</p>
+    <p><strong>Correction or retraction:</strong> {{ correction_status }}</p>
+    <p><strong>Independent corroboration:</strong> {{ corroboration_status }}</p>
+  </div>
+
+  <p class="conf-label">Model confidence</p>
+  <div class="conf-bar" role="img" aria-label="{{ label_display }}, {{ confidence_pct }}% confidence">
     <div class="conf-fill {{ 'conf-fill-real' if label == 'real' else 'conf-fill-fake' }}"
          id="conf-fill" data-target="{{ confidence_pct }}" style="width: 0%;"></div>
-    <span class="conf-text" id="conf-text">{{ 'REAL' if label == 'real' else 'FAKE' }} 0%</span>
-    <span class="conf-thumb" id="conf-thumb">{{ '👍' if label == 'real' else '👎' }}</span>
+    <span class="conf-text" id="conf-text">{{ label_display|upper }} 0%</span>
   </div>
   <script>
     (function () {
       var fill = document.getElementById('conf-fill');
       var text = document.getElementById('conf-text');
-      var thumb = document.getElementById('conf-thumb');
       if (!fill) return;
       var target = parseFloat(fill.getAttribute('data-target'));
-      var label = fill.classList.contains('conf-fill-real') ? 'REAL' : 'FAKE';
+      var label = fill.classList.contains('conf-fill-real') ? 'LIKELY REAL' : 'LIKELY FAKE';
       var duration = 1200;
 
-      // Animate width + count the percentage up over the same duration.
       var start = null;
       function step(ts) {
         if (start === null) start = ts;
@@ -101,7 +101,6 @@
           requestAnimationFrame(step);
         } else {
           text.textContent = label + ' ' + target.toFixed(1) + '%';
-          thumb.classList.add('conf-thumb-show');
         }
       }
       requestAnimationFrame(step);
@@ -112,8 +111,13 @@
   <p class="badge badge-low-confidence">Low confidence &mdash; this result sits close to the decision boundary.</p>
   {% endif %}
 
+  <section class="final-assessment final-assessment-{{ final_tone }}" aria-labelledby="final-assessment-title">
+    <h2 id="final-assessment-title">Final assessment: {{ final_label }}</h2>
+    <p><strong>Reason:</strong> {{ final_reason }}</p>
+  </section>
+
   {% if cache_hit %}
-  <p class="note">Identical text was analysed before &mdash; showing the cached result.</p>
+  <p class="note">Identical text was analysed before &mdash; showing the cached model result.</p>
   {% endif %}
 
   {% if is_internal_source %}
@@ -135,6 +139,7 @@
   </div>
   {% endif %}
 
+  <p class="caveat">{{ caveat }}</p>
   <a href="/" class="back-link">&larr; Analyse another article</a>
 </section>
 {% endblock %}

@@ -108,14 +108,17 @@ def search_fact_checks(query: str, max_results: int = MAX_RESULTS) -> list[FactC
 
 
 def fact_check_verdict(matches: list[FactCheckMatch]) -> str | None:
-    """Summarise matched reviews: 'false' if any review rates the claim
-    false, 'true' if any rates it true and none false, else None."""
+    """Summarise matched reviews without hiding contradictory ratings."""
     if not matches:
         return None
     ratings = [m.rating for m in matches]
-    if any(_rating_is_false(r) for r in ratings):
+    has_false = any(_rating_is_false(r) for r in ratings)
+    has_true = any(_rating_is_true(r) for r in ratings)
+    if has_false and has_true:
+        return "mixed"
+    if has_false:
         return "false"
-    if any(_rating_is_true(r) for r in ratings):
+    if has_true:
         return "true"
     return "mixed"
 

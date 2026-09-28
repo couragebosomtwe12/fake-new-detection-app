@@ -192,9 +192,37 @@ body {
   color: var(--text-primary);
 }
 
-.source-confidence { margin: 1rem 0 0.25rem; font-size: 0.95rem; }
+.source-confidence { margin: 1rem 0 0.75rem; font-size: 0.95rem; }
 .sc-trusted { color: var(--status-good); font-weight: 700; letter-spacing: 0.03em; }
 .sc-unknown { color: var(--status-critical); font-weight: 700; letter-spacing: 0.03em; }
+.evidence-summary {
+  display: grid;
+  gap: 0.5rem;
+  padding: 1rem;
+  background: var(--page);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+}
+.evidence-summary p { margin: 0; font-size: 0.9rem; }
+.assessment-real { color: var(--status-good); font-weight: 700; }
+.assessment-fake { color: var(--status-critical); font-weight: 700; }
+.final-assessment {
+  margin-top: 1rem;
+  padding: 1rem;
+  border: 1px solid var(--status-warning);
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--status-warning) 10%, var(--surface-1));
+}
+.final-assessment h2 { margin: 0 0 0.5rem; font-size: 1.15rem; }
+.final-assessment p { margin: 0; }
+.final-assessment-real {
+  border-color: var(--status-good);
+  background: color-mix(in srgb, var(--status-good) 10%, var(--surface-1));
+}
+.final-assessment-fake {
+  border-color: var(--status-critical);
+  background: color-mix(in srgb, var(--status-critical) 10%, var(--surface-1));
+}
 
 .conf-label {
   margin: 0.75rem 0 0.4rem;
