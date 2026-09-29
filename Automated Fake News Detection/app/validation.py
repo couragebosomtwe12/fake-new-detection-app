@@ -42,7 +42,6 @@ TRUSTED_SOURCES = {
     "dw.com",
     "rferl.org",
     "voanews.com",
-    "theconversation.com",
     # --- Ghanaian news (Feedspot top-20 Ghana news websites) ---
     "pulse.com.gh",
     "modernghana.com",
@@ -108,7 +107,6 @@ TRUSTED_SOURCE_NAMES = {
     "dw.com": "Deutsche Welle",
     "rferl.org": "Radio Free Europe/Radio Liberty",
     "voanews.com": "Voice of America",
-    "theconversation.com": "The Conversation",
     "pulse.com.gh": "Pulse Ghana",
     "modernghana.com": "Modern Ghana",
     "myjoyonline.com": "MyJoyOnline",

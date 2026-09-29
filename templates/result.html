@@ -71,8 +71,7 @@
   <div class="evidence-summary">
     <p><strong>Model assessment:</strong> <span class="assessment-{{ label }}">{{ label_display|upper }} &mdash; {{ confidence_pct }}%</span></p>
     <p><strong>External fact-check:</strong> {{ fact_check_status }}</p>
-    <p><strong>Correction or retraction:</strong> {{ correction_status }}</p>
-    <p><strong>Independent corroboration:</strong> {{ corroboration_status }}</p>
+    <p><strong>Correction notice in article:</strong> {{ correction_status }}</p>
   </div>
 
   <p class="conf-label">Model confidence</p>
@@ -135,22 +134,6 @@
       <p class="fc-claim">&ldquo;{{ m.claim }}&rdquo;{% if m.claimant %} &mdash; {{ m.claimant }}{% endif %}</p>
       {% if m.review_url %}<a class="fc-link" href="{{ m.review_url }}" target="_blank" rel="noopener">Read the fact-check &rarr;</a>{% endif %}
     </div>
-    {% endfor %}
-  </div>
-  {% endif %}
-
-  {% if corroboration_reports %}
-  <h2>Independent reports</h2>
-  <div class="corroboration-list">
-    {% for report in corroboration_reports %}
-    <article class="corroboration-item">
-      <div class="corroboration-heading">
-        <span class="corroboration-stance corroboration-{{ report.stance }}">{{ report.stance|upper }}</span>
-        <span class="corroboration-publisher">{{ report.publisher }} &middot; {{ report.source_kind|replace('_', ' ')|title }}</span>
-      </div>
-      <p>{{ report.title }}</p>
-      <a href="{{ report.url }}" target="_blank" rel="noopener noreferrer">Read the independent source &rarr;</a>
-    </article>
     {% endfor %}
   </div>
   {% endif %}

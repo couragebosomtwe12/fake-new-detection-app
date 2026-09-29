@@ -16,7 +16,6 @@ from fastapi.templating import Jinja2Templates
 
 from app import database as db
 from app.classifier import Classifier
-from app.corroboration import search_corroboration
 from app.evidence import build_evidence_assessment
 from app.explain import ExplanationResult, TokenWeight, explain
 from app.factcheck import FactCheckResult, build_query, search_fact_checks
@@ -149,14 +148,11 @@ def analyze(
     # for internal (university) sources, which external checkers don't cover.
     from concurrent.futures import ThreadPoolExecutor
 
-    evidence_executor = ThreadPoolExecutor(max_workers=2)
+    fc_executor = ThreadPoolExecutor(max_workers=1)
     query = build_query(submission.headline, submission.body)
     fc_future = None
     if not is_internal_source(submission.source_url):
-        fc_future = evidence_executor.submit(search_fact_checks, query)
-    corroboration_future = evidence_executor.submit(
-        search_corroboration, query, submission.source_url
-    )
+        fc_future = fc_executor.submit(search_fact_checks, query)
 
     conn = db.get_connection()
     try:
@@ -172,7 +168,6 @@ def analyze(
             fact_check_result = (
                 fc_future.result() if fc_future else FactCheckResult(status="success", matches=[])
             )
-            corroboration_result = corroboration_future.result()
             context = _render_context(
                 submission,
                 cached,
@@ -181,7 +176,6 @@ def analyze(
                 True,
                 source_trusted,
                 fact_check_result,
-                corroboration_result,
             )
         else:
             result = classifier.classify(submission.body)
@@ -209,7 +203,6 @@ def analyze(
             fact_check_result = (
                 fc_future.result() if fc_future else FactCheckResult(status="success", matches=[])
             )
-            corroboration_result = corroboration_future.result()
             context = _render_context(
                 submission,
                 analysis_row,
@@ -218,11 +211,10 @@ def analyze(
                 False,
                 source_trusted,
                 fact_check_result,
-                corroboration_result,
             )
     finally:
         conn.close()
-        evidence_executor.shutdown(wait=False)
+        fc_executor.shutdown(wait=False)
 
     return templates.TemplateResponse(request, "result.html", context)
 
@@ -235,7 +227,6 @@ def _render_context(
     cache_hit: bool,
     source_trusted,
     fact_check_result,
-    corroboration_result,
 ) -> dict:
     tokens = [TokenWeight(token=r["token"], weight=r["weight"]) for r in explanation_rows]
     max_weight = max((abs(t.weight) for t in tokens), default=1.0) or 1.0
@@ -273,7 +264,6 @@ def _render_context(
         source_trusted=source_trusted,
         internal_source=internal_source,
         fact_check_result=fact_check_result,
-        corroboration_result=corroboration_result,
     )
     return {
         "caveat": STANDING_CAVEAT,
@@ -295,8 +285,6 @@ def _render_context(
         "fc_matches": fact_check_result.matches,
         "fact_check_status": evidence.fact_check_status,
         "correction_status": evidence.correction_status,
-        "corroboration_status": evidence.corroboration_status,
-        "corroboration_reports": corroboration_result.reports,
         "final_label": evidence.final_label,
         "final_tone": evidence.final_tone,
         "final_reason": evidence.reason,

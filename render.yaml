@@ -10,5 +10,3 @@ services:
       # secrets must not be committed to the repository.
       - key: GOOGLE_FACTCHECK_API_KEY
         sync: false
-      - key: GOOGLE_CSE_ID
-        sync: false

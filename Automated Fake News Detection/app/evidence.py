@@ -3,7 +3,6 @@ from __future__ import annotations
 import re
 from dataclasses import dataclass
 
-from app.corroboration import CorroborationResult
 from app.factcheck import FactCheckMatch, FactCheckResult, fact_check_verdict
 
 
@@ -30,7 +29,6 @@ class EvidenceAssessment:
     source_reputation: str
     fact_check_status: str
     correction_status: str
-    corroboration_status: str
     final_label: str
     final_tone: str
     reason: str
@@ -62,31 +60,6 @@ def _fact_check_status(internal_source: bool, result: FactCheckResult) -> str:
     return "NO MATCH FOUND"
 
 
-def _corroboration_status(result: CorroborationResult) -> str:
-    if result.status == "not_configured":
-        return "NOT CONFIGURED"
-    if result.status == "failed":
-        return "LOOKUP FAILED"
-    supporting = len(result.supporting)
-    conflicting = len(result.conflicting)
-    if supporting and conflicting:
-        return f"CONFLICTING — {supporting} SUPPORTING, {conflicting} OPPOSING"
-    if conflicting:
-        return f"CONFLICTING — {conflicting} OPPOSING SOURCE{'S' if conflicting != 1 else ''}"
-    if supporting:
-        return f"FOUND — {supporting} SUPPORTING SOURCE{'S' if supporting != 1 else ''}"
-    if result.reports:
-        return "RELATED REPORTS FOUND"
-    return "NO SUPPORTING REPORTS"
-
-
-def _publisher_list(matches) -> str:
-    publishers = list(dict.fromkeys(item.publisher for item in matches))
-    if len(publishers) == 1:
-        return publishers[0]
-    return ", ".join(publishers[:-1]) + f" and {publishers[-1]}"
-
-
 def build_evidence_assessment(
     *,
     headline: str | None,
@@ -94,24 +67,21 @@ def build_evidence_assessment(
     source_trusted: bool,
     internal_source: bool,
     fact_check_result: FactCheckResult,
-    corroboration_result: CorroborationResult,
 ) -> EvidenceAssessment:
     correction = detect_correction(headline, body)
     source_reputation = "INTERNAL" if internal_source else "TRUSTED" if source_trusted else "UNKNOWN"
     fact_check_status = _fact_check_status(internal_source, fact_check_result)
-    corroboration_status = _corroboration_status(corroboration_result)
 
     if correction == "retraction":
         return EvidenceAssessment(
             source_reputation=source_reputation,
             fact_check_status=fact_check_status,
-            correction_status="RETRACTION DETECTED",
-            corroboration_status=corroboration_status,
+            correction_status="RETRACTION DETECTED IN ARTICLE",
             final_label="RETRACTED",
             final_tone="fake",
             reason=(
-                "The article contains a retraction notice indicating that the publisher withdrew "
-                "the original report or claim; the notice should be read for the exact correction."
+                "The submitted article contains a retraction notice indicating that the publisher "
+                "withdrew the original report or claim."
             ),
         )
 
@@ -119,17 +89,16 @@ def build_evidence_assessment(
         return EvidenceAssessment(
             source_reputation=source_reputation,
             fact_check_status=fact_check_status,
-            correction_status="CORRECTION DETECTED",
-            corroboration_status=corroboration_status,
+            correction_status="CORRECTION DETECTED IN ARTICLE",
             final_label="CORRECTED",
             final_tone="mixed",
             reason=(
-                "The article contains a correction or apology notice showing that material in the "
-                "original publication was changed; consult the notice for the corrected facts."
+                "The submitted article contains a correction, amendment or apology notice showing "
+                "that material in the original publication was changed."
             ),
         )
 
-    correction_status = "NOT DETECTED"
+    correction_status = "NOT DETECTED IN ARTICLE"
     verdict = fact_check_verdict(fact_check_result.matches)
     if verdict == "false":
         review = _matching_review(fact_check_result.matches, "false")
@@ -139,7 +108,6 @@ def build_evidence_assessment(
             source_reputation=source_reputation,
             fact_check_status=f"MATCH FOUND — {rating.upper()}",
             correction_status=correction_status,
-            corroboration_status=corroboration_status,
             final_label="LIKELY FAKE",
             final_tone="fake",
             reason=(
@@ -156,7 +124,6 @@ def build_evidence_assessment(
             source_reputation=source_reputation,
             fact_check_status=f"MATCH FOUND — {rating.upper()}",
             correction_status=correction_status,
-            corroboration_status=corroboration_status,
             final_label="LIKELY REAL",
             final_tone="real",
             reason=(
@@ -170,7 +137,6 @@ def build_evidence_assessment(
             source_reputation=source_reputation,
             fact_check_status="MATCH FOUND — MIXED",
             correction_status=correction_status,
-            corroboration_status=corroboration_status,
             final_label="DISPUTED",
             final_tone="mixed",
             reason=(
@@ -179,77 +145,30 @@ def build_evidence_assessment(
             ),
         )
 
-    supporting = corroboration_result.supporting
-    conflicting = corroboration_result.conflicting
-    if conflicting:
-        publishers = _publisher_list(conflicting)
-        return EvidenceAssessment(
-            source_reputation=source_reputation,
-            fact_check_status=fact_check_status,
-            correction_status=correction_status,
-            corroboration_status=corroboration_status,
-            final_label="DISPUTED",
-            final_tone="mixed",
-            reason=(
-                f"Reports from {publishers} contain wording that conflicts with the submitted "
-                "claim; review the linked sources before drawing a conclusion."
-            ),
-        )
-
-    if len(supporting) >= 2:
-        publishers = _publisher_list(supporting[:3])
-        return EvidenceAssessment(
-            source_reputation=source_reputation,
-            fact_check_status=fact_check_status,
-            correction_status=correction_status,
-            corroboration_status=corroboration_status,
-            final_label="LIKELY REAL",
-            final_tone="real",
-            reason=(
-                f"Independent reports from {publishers} describe the same central claim, and no "
-                "correction, retraction or contradictory professional fact-check was found."
-            ),
-        )
-
-    if len(supporting) == 1:
-        return EvidenceAssessment(
-            source_reputation=source_reputation,
-            fact_check_status=fact_check_status,
-            correction_status=correction_status,
-            corroboration_status=corroboration_status,
-            final_label="UNVERIFIED",
-            final_tone="mixed",
-            reason=(
-                f"A related report from {supporting[0].publisher} supports the claim, but one "
-                "independent source is insufficient for a corroborated conclusion."
-            ),
-        )
-
-    if corroboration_result.status == "failed":
+    if fact_check_result.status == "failed":
         reason = (
-            "The independent news search failed, so the article's central claim could not be "
-            "corroborated during this analysis."
+            "The professional fact-check lookup failed, and no correction or retraction notice was "
+            "found in the submitted article, so its central claim remains unverified."
         )
-    elif corroboration_result.status == "not_configured":
+    elif fact_check_result.status == "not_configured":
         reason = (
-            "Independent news search is not configured, so the article's central claim could not "
-            "be compared with other reports."
+            "Professional fact-check lookup is not configured, and no correction or retraction "
+            "notice was found in the submitted article, so its central claim remains unverified."
         )
     elif source_trusted:
         reason = (
             "The publisher is generally reputable, but source reputation does not verify this "
-            "individual report, and no matching fact-check or independent supporting report was found."
+            "individual report, and no matching published fact-check was found."
         )
     else:
         reason = (
-            "No matching published fact-check or independent supporting report was found, so the "
-            "article's central claim cannot currently be confirmed as true or false."
+            "No matching published fact-check or correction notice was found, so the article's "
+            "central claim cannot currently be confirmed as true or false."
         )
     return EvidenceAssessment(
         source_reputation=source_reputation,
         fact_check_status=fact_check_status,
         correction_status=correction_status,
-        corroboration_status=corroboration_status,
         final_label="UNVERIFIED",
         final_tone="mixed",
         reason=reason,

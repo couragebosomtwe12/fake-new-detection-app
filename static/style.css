@@ -353,42 +353,6 @@ body {
 .fc-link { font-size: 0.85rem; color: var(--series-real); text-decoration: none; }
 .fc-link:hover { text-decoration: underline; }
 
-.corroboration-list { display: flex; flex-direction: column; gap: 0.75rem; }
-.corroboration-item {
-  padding: 0.75rem 1rem;
-  background: var(--page);
-  border: 1px solid var(--border);
-  border-radius: 8px;
-}
-.corroboration-item p { margin: 0.5rem 0 0.35rem; font-size: 0.9rem; }
-.corroboration-item a { font-size: 0.85rem; color: var(--series-real); text-decoration: none; }
-.corroboration-item a:hover { text-decoration: underline; }
-.corroboration-heading { display: flex; align-items: center; gap: 0.6rem; flex-wrap: wrap; }
-.corroboration-stance {
-  display: inline-block;
-  padding: 0.15rem 0.6rem;
-  border-radius: 999px;
-  font-size: 0.75rem;
-  font-weight: 700;
-  letter-spacing: 0.03em;
-}
-.corroboration-supports {
-  color: var(--status-good);
-  border: 1px solid var(--status-good);
-  background: color-mix(in srgb, var(--status-good) 15%, var(--surface-1));
-}
-.corroboration-conflicts {
-  color: var(--status-critical);
-  border: 1px solid var(--status-critical);
-  background: color-mix(in srgb, var(--status-critical) 15%, var(--surface-1));
-}
-.corroboration-related {
-  color: var(--text-primary);
-  border: 1px solid var(--status-warning);
-  background: color-mix(in srgb, var(--status-warning) 15%, var(--surface-1));
-}
-.corroboration-publisher { font-size: 0.85rem; color: var(--text-secondary); font-weight: 600; }
-
 .caveat {
   margin-top: 1.5rem;
   padding-top: 1rem;
