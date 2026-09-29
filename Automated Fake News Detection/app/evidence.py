@@ -111,8 +111,8 @@ def build_evidence_assessment(
             final_label="LIKELY FAKE",
             final_tone="fake",
             reason=(
-                f"{publisher} published a review rating the central claim “{rating}”. "
-                "Open the linked review to examine the evidence behind that finding."
+                f"{publisher} reviewed the article's main claim and rated it “{rating}”. "
+                "The linked fact-check explains the evidence contradicting the claim."
             ),
         )
 
@@ -127,8 +127,8 @@ def build_evidence_assessment(
             final_label="LIKELY REAL",
             final_tone="real",
             reason=(
-                f"{publisher} published a review rating the central claim “{rating}”. "
-                "Open the linked review to examine the supporting evidence."
+                f"{publisher} reviewed the article's main claim and rated it “{rating}”. "
+                "The linked fact-check explains the evidence supporting the claim."
             ),
         )
 
@@ -140,30 +140,22 @@ def build_evidence_assessment(
             final_label="DISPUTED",
             final_tone="mixed",
             reason=(
-                "Published fact-check information does not support a clear true-or-false conclusion; "
-                "the linked reviews should be examined before accepting or sharing the claim."
+                "Published fact-checks give mixed or conflicting findings about the article's main "
+                "claim, so the available evidence does not support a clear conclusion."
             ),
         )
 
     if fact_check_result.status == "failed":
         reason = (
-            "The professional fact-check lookup failed, and no correction or retraction notice was "
-            "found in the submitted article, so its central claim remains unverified."
+            "The fact-check service could not be reached, so the article's main claim could not be confirmed."
         )
     elif fact_check_result.status == "not_configured":
         reason = (
-            "Professional fact-check lookup is not configured, and no correction or retraction "
-            "notice was found in the submitted article, so its central claim remains unverified."
-        )
-    elif source_trusted:
-        reason = (
-            "The publisher is generally reputable, but source reputation does not verify this "
-            "individual report, and no matching published fact-check was found."
+            "No professional fact-check was performed, so the article's main claim could not be confirmed."
         )
     else:
         reason = (
-            "No matching published fact-check or correction notice was found, so the article's "
-            "central claim cannot currently be confirmed as true or false."
+            "No published fact-check was found to confirm or reject the article's main claim."
         )
     return EvidenceAssessment(
         source_reputation=source_reputation,

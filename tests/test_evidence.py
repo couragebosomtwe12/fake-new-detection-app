@@ -80,7 +80,7 @@ def test_trusted_source_without_fact_check_remains_unverified():
     result = assess(source_trusted=True)
     assert result.source_reputation == "TRUSTED"
     assert result.final_label == "UNVERIFIED"
-    assert "source reputation does not verify" in result.reason
+    assert result.reason == "No published fact-check was found to confirm or reject the article's main claim."
 
 
 def test_fact_check_statuses_are_distinct():
@@ -90,7 +90,9 @@ def test_fact_check_statuses_are_distinct():
     failed = assess(fact_check_result=FactCheckResult(status="failed", matches=[]))
     no_match = assess()
     assert unavailable.fact_check_status == "NOT CONFIGURED"
+    assert unavailable.reason == "No professional fact-check was performed, so the article's main claim could not be confirmed."
     assert failed.fact_check_status == "LOOKUP FAILED"
+    assert failed.reason == "The fact-check service could not be reached, so the article's main claim could not be confirmed."
     assert no_match.fact_check_status == "NO MATCH FOUND"
 
 
